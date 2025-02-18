@@ -50,3 +50,9 @@ Facilitates networking between students and faculty members.
 Backend: Django (Python)
 Frontend: Vue.js
 Database: MYSQL
+
+## Use Case Diagram
+![Use_Case_Diagram](Use_Case_Diagram.png)
+
+## ER Diagram
+![ERD](ERD.png)
