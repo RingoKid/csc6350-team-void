@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Project, Feedback, Rating, Reaction, Collaboration, Notification, SearchLog, Report, User
+from .models import Project, Feedback, Rating, Reaction, Collaboration, Notification, SearchLog, Report, User, Message
 
 admin.site.register(Project)
 admin.site.register(Feedback)
@@ -10,3 +10,4 @@ admin.site.register(Notification)
 admin.site.register(SearchLog)
 admin.site.register(Report)
 admin.site.register(User)
+admin.site.register(Message)
