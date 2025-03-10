@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, Feedback, Rating, Reaction, Collaboration, Notification, SearchLog, Report, User
+from .models import *
 
 class UserSerializer(serializers.ModelSerializer):
     
