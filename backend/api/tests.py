@@ -50,13 +50,13 @@ class ReactionModelTest(TestCase):
             user=self.user,
             reaction_type='Like'
         )
-        
-def test_user_creation(self):
-        self.assertEqual(self.user.username, 'testuser')
-        self.assertEqual(self.user.email, 'testuser@example.com')
-        self.assertEqual(self.user.role, 'Presenter')
 
-class ProjectModelTest(TestCase):
+    def test_reaction_creation(self):
+        self.assertEqual(self.reaction.reaction_type, 'Like')
+        self.assertEqual(self.reaction.project.title, 'Test Project')
+        self.assertEqual(self.reaction.user.username, 'testuser')
+
+class CollaborationModelTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username='testuser',
@@ -70,34 +70,32 @@ class ProjectModelTest(TestCase):
             description='This is a test project',
             category='Hackathon'
         )
-
-    def test_project_creation(self):
-        self.assertEqual(self.project.title, 'Test Project')
-        self.assertEqual(self.project.description, 'This is a test project')
-        self.assertEqual(self.project.category, 'Hackathon')
-        self.assertEqual(self.project.user.username, 'testuser')
-
-class FeedbackModelTest(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser',
-            email='testuser@example.com',
-            password='password123',
-            role='Presenter'
-        )
-        self.project = Project.objects.create(
-            user=self.user,
-            title='Test Project',
-            description='This is a test project',
-            category='Hackathon'
-        )
-        self.feedback = Feedback.objects.create(
+        self.collaboration = Collaboration.objects.create(
             project=self.project,
             user=self.user,
-            comment='This is a test feedback'
+            status='Pending'
         )
 
-    def test_feedback_creation(self):
-        self.assertEqual(self.feedback.comment, 'This is a test feedback')
-        self.assertEqual(self.feedback.project.title, 'Test Project')
-        self.assertEqual(self.feedback.user.username, 'testuser')
+    def test_collaboration_creation(self):
+        self.assertEqual(self.collaboration.status, 'Pending')
+        self.assertEqual(self.collaboration.project.title, 'Test Project')
+        self.assertEqual(self.collaboration.user.username, 'testuser')
+
+class NotificationModelTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='testuser@example.com',
+            password='password123',
+            role='Presenter'
+        )
+        self.notification = Notification.objects.create(
+            user=self.user,
+            message='This is a test notification',
+            is_read=False
+        )
+
+    def test_notification_creation(self):
+        self.assertEqual(self.notification.message, 'This is a test notification')
+        self.assertEqual(self.notification.is_read, False)
+        self.assertEqual(self.notification.user.username, 'testuser')
