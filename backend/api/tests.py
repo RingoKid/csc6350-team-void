@@ -55,3 +55,47 @@ class ReactionModelTest(TestCase):
         self.assertEqual(self.reaction.reaction_type, 'Like')
         self.assertEqual(self.reaction.project.title, 'Test Project')
         self.assertEqual(self.reaction.user.username, 'testuser')
+
+class CollaborationModelTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='testuser@example.com',
+            password='password123',
+            role='Presenter'
+        )
+        self.project = Project.objects.create(
+            user=self.user,
+            title='Test Project',
+            description='This is a test project',
+            category='Hackathon'
+        )
+        self.collaboration = Collaboration.objects.create(
+            project=self.project,
+            user=self.user,
+            status='Pending'
+        )
+
+    def test_collaboration_creation(self):
+        self.assertEqual(self.collaboration.status, 'Pending')
+        self.assertEqual(self.collaboration.project.title, 'Test Project')
+        self.assertEqual(self.collaboration.user.username, 'testuser')
+
+class NotificationModelTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='testuser@example.com',
+            password='password123',
+            role='Presenter'
+        )
+        self.notification = Notification.objects.create(
+            user=self.user,
+            message='This is a test notification',
+            is_read=False
+        )
+
+    def test_notification_creation(self):
+        self.assertEqual(self.notification.message, 'This is a test notification')
+        self.assertEqual(self.notification.is_read, False)
+        self.assertEqual(self.notification.user.username, 'testuser')
