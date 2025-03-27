@@ -71,6 +71,51 @@ class ReactionModelTest(TestCase):
         self.assertEqual(self.reaction.project.title, 'Test Project')
         self.assertEqual(self.reaction.user.username, 'testuser')
 
+class SubmitRatingTestCase(TestCase):
+    def setUp(self):
+        # Create a test user
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='testuser@example.com',
+            password='password123',
+            role='Presenter'
+        )
+        # Create a test project
+        self.project = Project.objects.create(
+            user=self.user,
+            title='Test Project',
+            description='This is a test project.',
+            category='Hackathon'
+        )
+        # Set up API client and log in the user
+        self.client = APIClient()
+        self.client.login(username='testuser', password='password123')
+
+        # Define valid rating data
+        self.valid_rating_data = {
+            'project': self.project.id,
+            'user': self.user.id,
+            'creativity': 5,
+            'technical_skills': 4,
+            'impact': 3,
+            'presentation': 5,
+        }
+
+    # Test the basic flow: Submitting a valid rating
+    def test_submit_rating_success(self):
+        response = self.client.post('/api/ratings/', self.valid_rating_data)
+        print(response.status_code)  # Print the status code for debugging
+        print(response.data)         # Print the response data for debugging
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Rating.objects.count(), 1)
+        rating = Rating.objects.first()
+        self.assertEqual(rating.creativity, 5)
+        self.assertEqual(rating.technical_skills, 4)
+        self.assertEqual(rating.impact, 3)
+        self.assertEqual(rating.presentation, 5)
+        self.assertEqual(rating.project.title, 'Test Project')
+        self.assertEqual(rating.user.username, 'testuser')
+
 class ProjectModelTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -160,3 +205,39 @@ class NotificationModelTest(TestCase):
         self.assertEqual(self.notification.message, 'This is a test notification')
         self.assertEqual(self.notification.is_read, False)
         self.assertEqual(self.notification.user.username, 'testuser')
+        
+class UploadProjectTestCase(TestCase):
+    def setUp(self):
+        # Create a test user
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='testuser@example.com',
+            password='password123',
+            role='Presenter'
+        )
+        # Set up API client and log in the user
+        self.client = APIClient()
+        self.client.login(username='testuser', password='password123')
+
+        # Define valid project data
+        self.valid_project_data = {
+            'title': 'Test Project',
+            'description': 'This is a test project.',
+            'category': 'Hackathon',
+            'video_url': 'https://example.com/video.mp4',
+            'user': self.user.id,  # Include the user field
+        }
+
+    # Test the basic flow: Uploading a valid project
+    def test_upload_project_success(self):
+        response = self.client.post('/api/projects/', self.valid_project_data)
+        print(response.data)  # Print the response data for debugging
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Project.objects.count(), 1)
+        project = Project.objects.first()
+        self.assertEqual(project.title, 'Test Project')
+        self.assertEqual(project.description, 'This is a test project.')
+        self.assertEqual(project.category, 'Hackathon')
+        self.assertEqual(project.video_url, 'https://example.com/video.mp4')
+        self.assertEqual(project.user.username, 'testuser')
+
