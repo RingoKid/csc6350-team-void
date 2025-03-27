@@ -146,3 +146,38 @@ class NotificationModelTest(TestCase):
         self.assertEqual(self.notification.message, 'This is a test notification')
         self.assertEqual(self.notification.is_read, False)
         self.assertEqual(self.notification.user.username, 'testuser')
+
+class UploadProjectTestCase(TestCase):
+    def setUp(self):
+        # Create a test user
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='testuser@example.com',
+            password='password123',
+            role='Presenter'
+        )
+        # Set up API client and log in the user
+        self.client = APIClient()
+        self.client.login(username='testuser', password='password123')
+
+        # Define valid project data
+        self.valid_project_data = {
+            'title': 'Test Project',
+            'description': 'This is a test project.',
+            'category': 'Hackathon',
+            'video_url': 'https://example.com/video.mp4',
+            'user': self.user.id,  # Include the user field
+        }
+
+    # Test the basic flow: Uploading a valid project
+    def test_upload_project_success(self):
+        response = self.client.post('/api/projects/', self.valid_project_data)
+        print(response.data)  # Print the response data for debugging
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Project.objects.count(), 1)
+        project = Project.objects.first()
+        self.assertEqual(project.title, 'Test Project')
+        self.assertEqual(project.description, 'This is a test project.')
+        self.assertEqual(project.category, 'Hackathon')
+        self.assertEqual(project.video_url, 'https://example.com/video.mp4')
+        self.assertEqual(project.user.username, 'testuser')
