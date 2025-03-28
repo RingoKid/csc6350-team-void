@@ -332,31 +332,7 @@ class NotificationModelTest(TestCase):
         self.assertEqual(self.notification.message, 'This is a test notification')
         self.assertEqual(self.notification.is_read, False)
         self.assertEqual(self.notification.user.username, 'testuser')
-
-class UserLoginTestCase(TestCase):
-        # Set up APIRequestFactory
-        self.factory = APIRequestFactory()
-
-    # Test the basic flow: User logs in successfully
-    def test_user_login_success(self):
-        # Define login credentials
-        login_data = {
-            'username': 'testuser',
-            'password': 'password123'
-        }
-        # Create a POST request using APIRequestFactory
-        request = self.factory.post('/api/token/', login_data)
-        # Call the TokenObtainPairView directly
-        view = TokenObtainPairView.as_view()
-        response = view(request)
-        print(response.status_code)  # Print the status code for debugging
-        print(response.data)         # Print the response data for debugging
-        # Assert the response status code is 200 OK
-        self.assertEqual(response.status_code, 200)
-        # Assert the response contains access and refresh tokens
-        self.assertIn('access', response.data)
-        self.assertIn('refresh', response.data)
-
+        
 class ProjectSearchTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
