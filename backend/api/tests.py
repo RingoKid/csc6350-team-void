@@ -405,3 +405,86 @@ class UploadProjectTestCase(TestCase):
         self.assertEqual(project.category, 'Hackathon')
         self.assertEqual(project.video_url, 'https://example.com/video.mp4')
         self.assertEqual(project.user.username, 'testuser')
+
+class SearchLogModelTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='testuser@example.com',
+            password='password123',
+            role='Presenter'
+        )
+        self.search_log = SearchLog.objects.create(
+            user=self.user,
+            query='test query'
+        )
+
+    def test_search_log_creation(self):
+        self.assertEqual(self.search_log.query, 'test query')
+        self.assertEqual(self.search_log.user.username, 'testuser')
+
+class ReportModelTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='testuser@example.com',
+            password='password123',
+            role='Presenter'
+        )
+        self.project = Project.objects.create(
+            user=self.user,
+            title='Test Project',
+            description='This is a test project',
+            category='Hackathon'
+        )
+        self.feedback = Feedback.objects.create(
+            project=self.project,
+            user=self.user,
+            comment='This is a test feedback'
+        )
+        self.report = Report.objects.create(
+            reported_by=self.user,
+            project=self.project,
+            feedback=self.feedback,
+            reason='This is a test report',
+            status='Pending'
+        )
+
+    def test_report_creation(self):
+        self.assertEqual(self.report.reason, 'This is a test report')
+        self.assertEqual(self.report.status, 'Pending')
+        self.assertEqual(self.report.reported_by.username, 'testuser')
+        self.assertEqual(self.report.project.title, 'Test Project')
+        self.assertEqual(self.report.feedback.comment, 'This is a test feedback')
+
+class UserLoginTestCase(TestCase):
+    def setUp(self):
+    # Create a test user
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='testuser@example.com',
+            password='password123',
+            role='Presenter'
+        )
+        # Set up APIRequestFactory
+        self.factory = APIRequestFactory()
+
+    # Test the basic flow: User logs in successfully
+    def test_user_login_success(self):
+        # Define login credentials
+        login_data = {
+            'username': 'testuser',
+            'password': 'password123'
+        }
+        # Create a POST request using APIRequestFactory
+        request = self.factory.post('/api/token/', login_data)
+        # Call the TokenObtainPairView directly
+        view = TokenObtainPairView.as_view()
+        response = view(request)
+        print(response.status_code)  # Print the status code for debugging
+        print(response.data)         # Print the response data for debugging
+        # Assert the response status code is 200 OK
+        self.assertEqual(response.status_code, 200)
+        # Assert the response contains access and refresh tokens
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)
