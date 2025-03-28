@@ -21,7 +21,7 @@ class UserModelTest(TestCase):
         self.assertEqual(self.user.email, 'testuser@example.com')
         self.assertEqual(self.user.role, 'Presenter')
         print("User creation test passed!")
-"""       
+     
 class RatingModelTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -276,7 +276,7 @@ class UserLoginTestCase(TestCase):
         # Assert the response contains access and refresh tokens
         self.assertIn('access', response.data)
         self.assertIn('refresh', response.data)
-"""
+
 class ProjectSearchTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
