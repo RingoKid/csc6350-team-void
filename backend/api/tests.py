@@ -268,6 +268,7 @@ class EditProjectTestCase(TestCase):
         self.assertEqual(self.project.description, 'Updated Description')
         self.assertEqual(self.project.category, 'Hackathon')
         self.assertEqual(self.project.user.username, 'testuser')
+        self.assertEqual(self.project.user.username, 'testuser')
 
 class SubmitRatingTestCase(TestCase):
     def setUp(self):
