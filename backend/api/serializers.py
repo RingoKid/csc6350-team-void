@@ -54,3 +54,8 @@ class ReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Report
         fields = '__all__'
+
+class ProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = ['id', 'title', 'description', 'category', 'video_url', 'user']
