@@ -403,7 +403,7 @@ class UserLoginTestCase(BaseTestCase):
             'password': 'password123'
         }
         # Create a POST request using APIRequestFactory
-        request = self.factory.post('/api/token/', login_data)
+        request = self.factory.post('/token/', login_data)
         # Call the TokenObtainPairView directly
         view = TokenObtainPairView.as_view()
         response = view(request)
@@ -412,3 +412,32 @@ class UserLoginTestCase(BaseTestCase):
         # Assert the response contains access and refresh tokens
         self.assertIn('access', response.data)
         self.assertIn('refresh', response.data)
+
+class UserSignUpTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_user_signup_success(self):
+        data = {
+            "username": "newuser",
+            "email": "newuser@example.com",
+            "password": "password123",
+            "confirm_password": "password123",
+            "role": "Presenter",
+            "institution": "Test Institution"
+        }
+        response = self.client.post('/api/auth/signup/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], "User registered successfully!")
+
+    def test_user_signup_password_mismatch(self):
+        data = {
+            "username": "newuser",
+            "email": "newuser@example.com",
+            "password": "password123",
+            "confirm_password": "wrongpassword",
+            "role": "Presenter"
+        }
+        response = self.client.post('/api/auth/signup/', data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Passwords do not match.", str(response.data))

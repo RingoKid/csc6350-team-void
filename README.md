@@ -30,7 +30,10 @@
 
 ## Instructions to run tests 
 `docker-compose build`
+
 `docker-compose up`
+
 `docker ps`  ---> this is to get the <container_id> to use in the next step
+
 `docker exec -it <container_id> python manage.py test`
 

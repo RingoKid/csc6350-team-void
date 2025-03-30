@@ -3,6 +3,8 @@ from . import views
 from rest_framework import routers
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import ProjectSearchView
+from .views import UserRegistrationView
+
 
 
 router = routers.DefaultRouter()
@@ -18,8 +20,9 @@ router.register('reports', views.ReportViewSet)
 
 
 urlpatterns = [
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('projects/search/', ProjectSearchView.as_view(), name='project_search'),
+    path('auth/signup/', UserRegistrationView.as_view(), name='user_signup'), 
     path('', include(router.urls)),
 ]
