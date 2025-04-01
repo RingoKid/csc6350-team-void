@@ -27,8 +27,6 @@ import Navbar from "./components/Navbar.vue";
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  margin: 0 auto; /* Center the content horizontally */
-  padding: 0 20px; /* Add padding for smaller screens */
 }
 
 /* Header */
