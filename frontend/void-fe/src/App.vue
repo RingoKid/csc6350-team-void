@@ -28,15 +28,15 @@ import Navbar from "./components/Navbar.vue";
   flex-direction: column;
   min-height: 100vh;
   width: 100vw;
-  min-width: 100vw;
   margin: 0 auto; /* Center the content horizontally */
   padding: 0 20px; /* Add padding for smaller screens */
+  background-color: white;
 }
 
 /* Header */
 header {
-  background-color: #333;
-  color: white;
+  background-color: white;
+  color: black;
   padding: 10px 20px;
 }
 
@@ -48,8 +48,8 @@ main {
 
 /* Footer */
 footer {
-  background-color: #333;
-  color: white;
+  background-color: white;
+  color: black;
   text-align: center;
   padding: 10px 0;
 }
