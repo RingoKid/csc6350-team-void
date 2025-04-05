@@ -14,10 +14,9 @@ class FeedbackSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class RatingSerializer(serializers.ModelSerializer):
-    
     class Meta:
         model = Rating
-        fields = '__all__'
+        fields = ['creativity', 'technical_skills', 'impact', 'presentation', 'user']
 
 class ReactionSerializer(serializers.ModelSerializer):
     
@@ -50,9 +49,11 @@ class ReportSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ProjectSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+
     class Meta:
         model = Project
-        fields = ['id', 'title', 'description', 'category', 'video_url', 'user']
+        fields = ['id', 'title', 'description', 'thumbnail', 'category', 'video_url', 'user', 'username']
 
 from rest_framework import serializers
 from .models import User

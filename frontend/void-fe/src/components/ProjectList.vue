@@ -30,9 +30,9 @@
             v-for="(project, index) in projects"
             :key="index"
           >
-            <img :src="project.image" :alt="project.title" />
+            <img :src="project.thumbnail" :alt="project.title" />
             <h3>{{ project.title }}</h3>
-            <p>By: {{ project.author }}</p>
+            <p>By: {{ project.username }}</p>
             <p>Rating: {{ project.rating }}</p>
           </div>
         </div>
@@ -46,57 +46,30 @@ export default {
   name: "ProjectList",
   data() {
     return {
-      projects: [
-        {
-          image: "https://picsum.photos/300/200?random=1",
-          title: "Project Title 1",
-          author: "User Name 1",
-          rating: "★★★★☆",
-        },
-        {
-          image: "https://picsum.photos/300/200?random=2",
-          title: "Project Title 2",
-          author: "User Name 2",
-          rating: "★★★★★",
-        },
-        {
-          image: "https://picsum.photos/300/200?random=3",
-          title: "Project Title 3",
-          author: "User Name 3",
-          rating: "★★★☆☆",
-        },
-        {
-          image: "https://picsum.photos/300/200?random=4",
-          title: "Project Title 4",
-          author: "User Name 4",
-          rating: "★★★★☆",
-        },
-        {
-          image: "https://picsum.photos/300/200?random=5",
-          title: "Project Title 5",
-          author: "User Name 5",
-          rating: "★★★★★",
-        },
-        {
-          image: "https://picsum.photos/300/200?random=6",
-          title: "Project Title 6",
-          author: "User Name 6",
-          rating: "★★★☆☆",
-        },
-        {
-          image: "https://picsum.photos/300/200?random=7",
-          title: "Project Title 7",
-          author: "User Name 7",
-          rating: "★★★★☆",
-        },
-        {
-          image: "https://picsum.photos/300/200?random=8",
-          title: "Project Title 8",
-          author: "User Name 8",
-          rating: "★★★★★",
-        },
-      ],
+      projects: [],
     };
+  },
+  created() {
+    this.fetchProjects();
+  },
+  methods: {
+    async fetchProjects() {
+      try {
+        const response = await fetch('http://localhost:8000/api/projects/');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        this.projects = data;
+        
+        // Log the thumbnail URLs
+        this.projects.forEach(project => {
+          console.log(`Project: ${project.title}, Thumbnail: ${project.thumbnail}`);
+        });
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      }
+    },
   },
 };
 </script>

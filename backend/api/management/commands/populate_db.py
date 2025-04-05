@@ -9,25 +9,43 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         # Create Users
         users = []
-        for i in range(5):
+        user_names = ['Alice', 'Bob', 'Charlie', 'David', 'Eve']
+        for i, name in enumerate(user_names):
             user = User.objects.create_user(
-                username=f'user{i}',
-                email=f'user{i}@example.com',
+                username=f'{name.lower()}{random.randint(1, 10000)}',
+                email=f'{name.lower()}{random.randint(1, 10000)}@example.com',
                 password='password',
                 role=random.choice(['Presenter', 'Reviewer', 'Admin']),
                 institution=f'Institution {i}'
             )
             users.append(user)
 
+        project_titles = [
+            'AI-Powered Chatbot',
+            'E-Commerce Platform',
+            'Social Media Analytics Tool',
+            'Online Learning Management System',
+            'Healthcare Appointment Scheduler'
+        ]
+
+        project_descriptions = [
+            'A chatbot that uses AI to provide customer support.',
+            'A platform for buying and selling products online.',
+            'A tool to analyze social media trends and metrics.',
+            'A system to manage online courses and student progress.',
+            'An application to schedule and manage healthcare appointments.'
+        ]
+
         # Create Projects
         projects = []
-        for i in range(10):
+        for i in range(len(project_titles)):
             project = Project.objects.create(
                 user=random.choice(users),
-                title=f'Project {i}',
-                description=f'Description for project {i}',
+                title=project_titles[i],
+                description=project_descriptions[i],
                 category=random.choice(['Hackathon', 'Class Project', 'Research']),
-                created_at=timezone.now()
+                created_at=timezone.now(),
+                thumbnail=f'https://picsum.photos/seed/{i}/150',
             )
             projects.append(project)
 
@@ -41,16 +59,17 @@ class Command(BaseCommand):
             )
 
         # Create Ratings
-        for i in range(20):
-            Rating.objects.create(
-                project=random.choice(projects),
-                user=random.choice(users),
-                creativity=random.randint(1, 5),
-                technical_skills=random.randint(1, 5),
-                impact=random.randint(1, 5),
-                presentation=random.randint(1, 5),
-                created_at=timezone.now()
-            )
+        for project in projects:
+            for _ in range(random.randint(1, 5)):
+                Rating.objects.create(
+                    project=project,
+                    user=random.choice(users),
+                    creativity=random.randint(1, 5),
+                    technical_skills=random.randint(1, 5),
+                    impact=random.randint(1, 5),
+                    presentation=random.randint(1, 5),
+                    created_at=timezone.now()
+                )
 
         # Create Reactions
         for i in range(20):
