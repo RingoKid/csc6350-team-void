@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import Login from "../components/Login.vue";
 import Dashboard from "../components/Dashboard.vue"; 
 import SearchAndFilter from "../components/SearchAndFilter.vue";
+import SinglePageView from "../views/SinglePageView.vue"
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -46,6 +47,11 @@ const router = createRouter({
       },
       
     }, // Example protected page
+    {
+      path: '/single-page', // ✅ 새로운 경로 추가
+      name: 'SinglePageView',
+      component: SinglePageView,
+    },
   ],
 })
 
