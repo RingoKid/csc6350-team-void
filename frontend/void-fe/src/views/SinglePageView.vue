@@ -1,45 +1,56 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 
-interface Comment {
+interface Feedback {
   id: number
-  author: string
-  content: string
-  date: string
-  rating: number
+  user: number
+  comment: string
+  created_at: string
 }
 
-const projectTitle = ref('Project')
-const projectDescription = ref('Description of the project')
-const rating = ref(4.5)
+const route = useRoute()
+const projectId = route.params.id
+
+const projectTitle = ref('')
+const projectDescription = ref('')
+const rating = ref(0)
 const newComment = ref('')
 const newCommentRating = ref(5)
+const projectThumbnail = ref('')
 
-const comments = ref<Comment[]>([
-  {
-    id: 1,
-    author: 'John Doe',
-    content: 'Good!',
-    date: '2024-03-15',
-    rating: 4
-  },
-  {
-    id: 2,
-    author: 'Mary Jane',
-    content: 'Nice.',
-    date: '2024-03-14',
-    rating: 4.5
+const feedbacks = ref<Feedback[]>([])
+
+onMounted(async () => {
+  try {
+    const projectResponse = await fetch(`http://localhost:8000/api/projects/${projectId}/`)
+    if (!projectResponse.ok) {
+      throw new Error('Failed to fetch project details')
+    }
+    const projectData = await projectResponse.json()
+    projectTitle.value = projectData.title
+    projectDescription.value = projectData.description
+    rating.value = projectData.rating
+    projectThumbnail.value = projectData.thumbnail
+
+    const feedbackResponse = await fetch(`http://localhost:8000/api/projects/${projectId}/feedback/`)
+    if (!feedbackResponse.ok) {
+      throw new Error('Failed to fetch feedback')
+    }
+    const feedbackData = await feedbackResponse.json()
+    feedbacks.value = feedbackData
+  } catch (error) {
+    console.error('Error fetching project details or feedback:', error)
   }
-])
+})
 
 const addComment = () => {
   if (newComment.value.trim()) {
-    comments.value.push({
-      id: comments.value.length + 1,
-      author: 'User',
-      content: newComment.value,
-      date: new Date().toISOString().split('T')[0],
-      rating: newCommentRating.value
+    feedbacks.value.push({
+      id: feedbacks.value.length + 1,
+      user: 0,
+      comment: newComment.value,
+      created_at: new Date().toISOString().split('T')[0]
     })
     newComment.value = ''
     newCommentRating.value = 5
@@ -52,7 +63,8 @@ const addComment = () => {
     <div class="project-review">
       <div class="top-section">
         <div class="preview-section">
-          <div class="empty-preview">none</div>
+          <img :src="projectThumbnail" alt="Project Thumbnail" class="preview-image" v-if="projectThumbnail" />
+          <div class="empty-preview" v-else>none</div>
         </div>
         <div class="details-section">
           <h1>{{ projectTitle }}</h1>
@@ -64,44 +76,37 @@ const addComment = () => {
         </div>
       </div>
   
-      <!-- ✅ comment section moved outside and below -->
+      <!-- Feedback section -->
       <div class="comments-section">
-                <h2>Comment</h2>
-                <div class="comments-list">
-        <div v-for="comment in comments" :key="comment.id" class="comment">
+        <h2>Feedback</h2>
+        <div class="comments-list">
+          <div v-for="feedback in feedbacks" :key="feedback.id" class="comment">
             <div class="comment-header">
-            <span class="author">{{ comment.author }}</span>
-            <span class="date">{{ comment.date }}</span>
+              <span class="author">User ID: {{ feedback.user }}</span>
+              <span class="date">{{ feedback.created_at }}</span>
             </div>
 
-            <!-- Comment Rate -->
-            <div class="comment-rating">
-            <span class="stars">
-                {{ '★'.repeat(comment.rating) + '☆'.repeat(5 - comment.rating) }}
-            </span>
-            </div>
-
-            <p class="comment-content">{{ comment.content }}</p>
-        </div>
+            <p class="comment-content">{{ feedback.comment }}</p>
+          </div>
         </div>
   
         <div class="comment-input">
-            <textarea 
-                v-model="newComment"
-                placeholder="input a comment..."
-                rows="3"
-            ></textarea>
-            
-            <!-- Select Rate -->
-            <label>
-                Rating:
-                <select v-model="newCommentRating">
-                <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
-                </select>
-            </label>
+          <textarea 
+            v-model="newComment"
+            placeholder="input a comment..."
+            rows="3"
+          ></textarea>
+          
+          <!-- Select Rate -->
+          <label>
+            Rating:
+            <select v-model="newCommentRating">
+              <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
+            </select>
+          </label>
 
-            <button @click="addComment">Submit</button>
-            </div>
+          <button @click="addComment">Submit</button>
+        </div>
       </div>
     </div>
   </template>

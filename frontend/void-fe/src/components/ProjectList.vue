@@ -30,10 +30,12 @@
             v-for="(project, index) in projects"
             :key="index"
           >
-            <img :src="project.thumbnail" :alt="project.title" />
-            <h3>{{ project.title }}</h3>
-            <p>By: {{ project.username }}</p>
-            <p>Rating: {{ project.rating }}</p>
+            <router-link :to="`/project/${project.id}`">
+              <img :src="project.thumbnail" :alt="project.title" />
+              <h3>{{ project.title }}</h3>
+              <p>By: {{ project.username }}</p>
+              <p>Rating: {{ project.rating }}</p>
+            </router-link>
           </div>
         </div>
       </section>

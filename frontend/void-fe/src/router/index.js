@@ -50,7 +50,7 @@ const router = createRouter({
       
     }, // Example protected page
     {
-      path: '/single-page', // ✅ 새로운 경로 추가
+      path: '/project/:id', // ✅ 새로운 경로 추가
       name: 'SinglePageView',
       component: SinglePageView,
     },

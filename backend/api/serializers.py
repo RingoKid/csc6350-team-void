@@ -50,10 +50,11 @@ class ReportSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
+    feedbacks = FeedbackSerializer(many=True, read_only=True, source='feedback_set')
 
     class Meta:
         model = Project
-        fields = ['id', 'title', 'description', 'thumbnail', 'category', 'video_url', 'user', 'username']
+        fields = ['id', 'title', 'description', 'thumbnail', 'category', 'video_url', 'user', 'username', 'feedbacks']
 
 from rest_framework import serializers
 from .models import User

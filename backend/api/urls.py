@@ -24,5 +24,6 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('projects/search/', ProjectSearchView.as_view(), name='project_search'),
     path('auth/signup/', UserRegistrationView.as_view(), name='user_signup'), 
+    path('projects/<int:project_id>/feedback/', views.ProjectFeedbackView.as_view(), name='project-feedback'),
     path('', include(router.urls)),
 ]
