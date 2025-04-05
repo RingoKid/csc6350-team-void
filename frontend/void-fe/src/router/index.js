@@ -1,9 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import Login from "../components/Login.vue";
-import Dashboard from "../components/Dashboard.vue";
+import Dashboard from "../components/Dashboard.vue"; 
+import SearchAndFilter from "../components/SearchAndFilter.vue";
 import SinglePageView from "../views/SinglePageView.vue"
-
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,6 +26,12 @@ const router = createRouter({
       path: "/login", 
       name: "login", 
       component: Login },
+
+      {
+        path: "/search",
+        name: "search",
+        component: SearchAndFilter,
+      },
     
       { 
       path: "/dashboard", 
