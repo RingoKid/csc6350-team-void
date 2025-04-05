@@ -29,6 +29,7 @@ class Project(models.Model):
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     upload_path = models.FileField(upload_to='projects/', blank=True, null=True)
     video_url = models.URLField(blank=True, null=True)
+    thumbnail = models.URLField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -67,3 +67,9 @@ class UserRegistrationView(APIView):
             serializer.save()
             return Response({"message": "User registered successfully!"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ProjectFeedbackView(APIView):
+    def get(self, request, project_id):
+        feedbacks = Feedback.objects.filter(project_id=project_id)
+        serializer = FeedbackSerializer(feedbacks, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
