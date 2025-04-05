@@ -1,13 +1,6 @@
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-
-interface Feedback {
-  id: number
-  user: number
-  comment: string
-  created_at: string
-}
 
 const route = useRoute()
 const projectId = route.params.id
@@ -19,7 +12,7 @@ const newComment = ref('')
 const newCommentRating = ref(5)
 const projectThumbnail = ref('')
 
-const feedbacks = ref<Feedback[]>([])
+const feedbacks = ref([])
 
 onMounted(async () => {
   try {
@@ -56,7 +49,6 @@ const addComment = () => {
     newCommentRating.value = 5
   }
 }
-
 </script>
 
 <template>
