@@ -6,6 +6,7 @@ import SearchAndFilter from "../components/SearchAndFilter.vue";
 import SinglePageView from "../views/SinglePageView.vue"
 import ProjectList from "../components/ProjectList.vue";
 import Blog from "../components/Blog.vue";
+import CreateProject from '../components/CreateProject.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -64,6 +65,11 @@ const router = createRouter({
       name: 'Blog',
       component: Blog,
     },
+    {
+      path: '/create-project',
+      name: 'create-project',
+      component: CreateProject
+    }
   ],
 })
 
