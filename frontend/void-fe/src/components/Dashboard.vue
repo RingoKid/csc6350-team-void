@@ -29,6 +29,9 @@
               <router-link :to="{ name: 'SinglePageView', params: { id: project.id }}" class="view-btn">
                 View Details
               </router-link>
+              <router-link :to="{ name: 'edit-project', params: { id: project.id }}" class="edit-btn">
+                Edit
+              </router-link>
             </div>
           </div>
         </div>
@@ -204,20 +207,33 @@ export default {
 
 .project-actions {
   margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
 }
 
-.view-btn {
+.view-btn, .edit-btn {
   display: inline-block;
   padding: 0.5rem 1rem;
-  background-color: #3498db;
   color: white;
   text-decoration: none;
   border-radius: 4px;
   transition: background-color 0.3s;
 }
 
+.view-btn {
+  background-color: #3498db;
+}
+
 .view-btn:hover {
   background-color: #2980b9;
+}
+
+.edit-btn {
+  background-color: #f39c12;
+}
+
+.edit-btn:hover {
+  background-color: #e67e22;
 }
 
 .no-projects {

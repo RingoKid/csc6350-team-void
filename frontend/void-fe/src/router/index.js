@@ -7,6 +7,7 @@ import SinglePageView from "../views/SinglePageView.vue"
 import ProjectList from "../components/ProjectList.vue";
 import Blog from "../components/Blog.vue";
 import CreateProject from '../components/CreateProject.vue'
+import EditProject from '../views/EditProject.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -69,6 +70,11 @@ const router = createRouter({
       path: '/create-project',
       name: 'create-project',
       component: CreateProject
+    },
+    {
+      path: '/edit-project/:id',
+      name: 'edit-project',
+      component: EditProject
     }
   ],
 })
