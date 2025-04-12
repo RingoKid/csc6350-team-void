@@ -60,7 +60,26 @@
           // Save the access and refresh tokens in localStorage
           localStorage.setItem("access_token", data.access);
           localStorage.setItem("refresh_token", data.refresh);
-          // Redirect to a protected page or dashboard
+          
+          // Get user ID from the token response
+          const userResponse = await fetch("http://127.0.0.1:8000/api/users/", {
+            headers: {
+              "Authorization": `Bearer ${data.access}`
+            }
+          });
+  
+          if (!userResponse.ok) {
+            throw new Error("Failed to get user information");
+          }
+  
+          const users = await userResponse.json();
+          const currentUser = users.find(user => user.username === username.value);
+          if (!currentUser) {
+            throw new Error("Failed to get user information");
+          }
+  
+          localStorage.setItem("user_id", currentUser.id);
+          // Redirect to dashboard
           router.push("/dashboard");
         } catch (error) {
           errorMessage.value = error.message || "An error occurred. Please try again.";
