@@ -136,9 +136,9 @@ body {
 
 /* Container */
 .container {
-  max-width: 1200px; /* Limit the width of the container */
-  margin: 0 auto; /* Center the container horizontally */
-  padding: 0 20px; /* Add padding for smaller screens */
+  max-width: 1400px; /* Increased width */
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
 /* Hero Section */
