@@ -1,12 +1,29 @@
 from django.shortcuts import render
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
 from .models import *
 from .serializers import *
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly, BasePermission
 from rest_framework.decorators import action
+from django.shortcuts import get_object_or_404
+
+class IsOwnerOrSuperuser(BasePermission):
+    """
+    Custom permission to only allow owners of a project or superusers to edit it.
+    """
+    def has_object_permission(self, request, view, obj):
+        # Read permissions are allowed to any request
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Superusers can edit any project
+        if request.user.is_superuser:
+            return True
+
+        # Write permissions are only allowed to the project owner
+        return obj.user == request.user
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -15,16 +32,45 @@ class UserViewSet(viewsets.ModelViewSet):
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrSuperuser]
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             permission_classes = [AllowAny]
         else:
-            permission_classes = [IsAuthenticated]
+            permission_classes = [IsAuthenticated, IsOwnerOrSuperuser]
         return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def rate(self, request, pk=None):
+        project = self.get_object()
+        rating_value = request.data.get('rating')
+        
+        if not rating_value or not isinstance(rating_value, (int, float)) or not (1 <= rating_value <= 5):
+            return Response(
+                {'error': 'Please provide a valid rating between 1 and 5'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update or create the rating
+        rating, created = Rating.objects.update_or_create(
+            project=project,
+            user=request.user,
+            defaults={'rating': rating_value}
+        )
+
+        serializer = RatingSerializer(rating)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def ratings(self, request, pk=None):
+        project = self.get_object()
+        ratings = project.ratings.all()
+        serializer = RatingSerializer(ratings, many=True)
+        return Response(serializer.data)
 
 class FeedbackViewSet(viewsets.ModelViewSet):
     queryset = Feedback.objects.all()
@@ -81,6 +127,8 @@ class UserRegistrationView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ProjectFeedbackView(APIView):
+    permission_classes = [AllowAny]
+    
     def get(self, request, project_id):
         feedbacks = Feedback.objects.filter(project_id=project_id)
         serializer = FeedbackSerializer(feedbacks, many=True)

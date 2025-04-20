@@ -8,15 +8,20 @@ class UserSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class FeedbackSerializer(serializers.ModelSerializer):
+    user = serializers.ReadOnlyField(source='user.username')
     
     class Meta:
         model = Feedback
-        fields = '__all__'
+        fields = ['id', 'project', 'user', 'comment', 'created_at']
+        read_only_fields = ['user']
 
 class RatingSerializer(serializers.ModelSerializer):
+    user = serializers.ReadOnlyField(source='user.username')
+
     class Meta:
         model = Rating
-        fields = ['creativity', 'technical_skills', 'impact', 'presentation', 'user']
+        fields = ['id', 'project', 'user', 'rating', 'created_at']
+        read_only_fields = ['user']
 
 class ReactionSerializer(serializers.ModelSerializer):
     
@@ -49,12 +54,27 @@ class ReportSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ProjectSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username', read_only=True)
-    feedbacks = FeedbackSerializer(many=True, read_only=True, source='feedback_set')
+    user = serializers.ReadOnlyField(source='user.username')
+    average_rating = serializers.FloatField(read_only=True)
+    rating_count = serializers.IntegerField(read_only=True)
+    user_rating = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
-        fields = ['id', 'title', 'description', 'thumbnail', 'category', 'video_url', 'user', 'username', 'feedbacks']
+        fields = ['id', 'title', 'description', 'category', 'thumbnail', 
+                 'created_at', 'updated_at', 'user', 'average_rating', 
+                 'rating_count', 'user_rating']
+        read_only_fields = ['user']
+
+    def get_user_rating(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            try:
+                rating = Rating.objects.get(project=obj, user=request.user)
+                return rating.rating
+            except Rating.DoesNotExist:
+                pass
+        return None
 
 from rest_framework import serializers
 from .models import User

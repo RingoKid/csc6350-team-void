@@ -7,6 +7,7 @@ import SinglePageView from "../views/SinglePageView.vue"
 import ProjectList from "../components/ProjectList.vue";
 import Blog from "../components/Blog.vue";
 import CreateProject from '../components/CreateProject.vue'
+import EditProject from '../components/EditProject.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -68,7 +69,28 @@ const router = createRouter({
     {
       path: '/create-project',
       name: 'create-project',
-      component: CreateProject
+      component: CreateProject,
+      beforeEnter: (to, from, next) => {
+        const token = localStorage.getItem("access_token");
+        if (token) {
+          next();
+        } else {
+          next("/login");
+        }
+      },
+    },
+    {
+      path: '/edit-project/:id',
+      name: 'edit-project',
+      component: EditProject,
+      beforeEnter: (to, from, next) => {
+        const token = localStorage.getItem("access_token");
+        if (token) {
+          next();
+        } else {
+          next("/login");
+        }
+      },
     }
   ],
 })

@@ -2,17 +2,24 @@
   <div class="dashboard-container">
     <div class="dashboard-header">
       <h1>Welcome to Your Dashboard</h1>
-      <p>Manage and view your projects</p>
-      <button class="logout-btn" @click="logout">Logout</button>
+      <p v-if="isSuperuser">Admin Dashboard - Manage All Projects</p>
+      <p v-else>Manage and view your projects</p>
+      <div class="header-actions">
+        <span v-if="isSuperuser" class="admin-badge">Admin View</span>
+        <button class="logout-btn" @click="logout">Logout</button>
+      </div>
     </div>
 
     <div class="projects-section">
-      <h2>Your Projects</h2>
-      <div class="dashboard-actions">
-        <router-link to="/create-project" class="create-project-btn">
-          Create Project
-        </router-link>
+      <div class="section-header">
+        <h2>{{ isSuperuser ? 'All Projects' : 'Your Projects' }}</h2>
+        <div class="dashboard-actions">
+          <router-link to="/create-project" class="create-project-btn">
+            Create Project
+          </router-link>
+        </div>
       </div>
+
       <div v-if="projects.length" class="projects-grid">
         <div v-for="project in projects" :key="project.id" class="project-card">
           <div class="project-image">
@@ -20,21 +27,42 @@
           </div>
           <div class="project-content">
             <h3>{{ project.title }}</h3>
+            <div class="project-author">
+              <span>By {{ project.user }}</span>
+              <span v-if="project.user === currentUsername" class="owner-badge">Owner</span>
+            </div>
             <p class="project-description">{{ project.description }}</p>
             <div class="project-meta">
               <span class="category">{{ project.category }}</span>
-              <span class="rating">★ {{ project.rating || 'No ratings yet' }}</span>
+              <div class="rating-display">
+                <span class="stars">
+                  <span v-for="i in 5" :key="i" class="star" 
+                        :class="{ 'filled': i <= Math.round(project.average_rating || 0) }">★</span>
+                </span>
+                <span class="rating-text" v-if="project.average_rating">
+                  {{ project.average_rating.toFixed(1) }}
+                  <span class="rating-count">({{ project.rating_count }})</span>
+                </span>
+                <span class="rating-text" v-else>No ratings yet</span>
+              </div>
             </div>
             <div class="project-actions">
               <router-link :to="{ name: 'SinglePageView', params: { id: project.id }}" class="view-btn">
                 View Details
+              </router-link>
+              <router-link 
+                v-if="isSuperuser || project.user === currentUsername"
+                :to="{ name: 'edit-project', params: { id: project.id }}" 
+                class="edit-btn"
+              >
+                Edit Project
               </router-link>
             </div>
           </div>
         </div>
       </div>
       <div v-else class="no-projects">
-        <p>You haven't created any projects yet.</p>
+        <p>{{ isSuperuser ? 'No projects found in the system.' : "You haven't created any projects yet." }}</p>
         <router-link to="/create-project" class="create-btn">Create Your First Project</router-link>
       </div>
     </div>
@@ -49,10 +77,17 @@ export default {
   setup() {
     const router = useRouter();
     const projects = ref([]);
+    const isSuperuser = ref(false);
+    const currentUsername = ref('');
 
     const fetchProjects = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/user/projects/', {
+        // If superuser, fetch all projects, otherwise fetch user's projects
+        const endpoint = isSuperuser.value ? 
+          'http://localhost:8000/api/projects/' : 
+          'http://localhost:8000/api/user/projects/';
+        
+        const response = await fetch(endpoint, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('access_token')}`
           }
@@ -67,18 +102,26 @@ export default {
     };
 
     onMounted(() => {
+      isSuperuser.value = localStorage.getItem('is_superuser') === 'true';
+      currentUsername.value = localStorage.getItem('username');
       fetchProjects();
     });
 
     const logout = () => {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user_id");
+      localStorage.removeItem("username");
+      localStorage.removeItem("is_superuser");
+      window.dispatchEvent(new Event('auth-state-changed'));
       router.push("/login");
     };
 
     return {
       logout,
-      projects
+      projects,
+      isSuperuser,
+      currentUsername
     };
   },
 };
@@ -197,27 +240,71 @@ export default {
   color: #666;
 }
 
-.rating {
-  color: #f39c12;
-  font-weight: bold;
+.rating-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stars {
+  display: flex;
+  gap: 2px;
+}
+
+.star {
+  color: #ddd;
+  font-size: 1rem;
+}
+
+.star.filled {
+  color: #ffd700;
+}
+
+.rating-text {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.rating-count {
+  color: #999;
+  font-size: 0.8rem;
 }
 
 .project-actions {
+  display: flex;
+  gap: 1rem;
   margin-top: 1rem;
 }
 
-.view-btn {
+.view-btn, .edit-btn {
+  flex: 1;
   display: inline-block;
   padding: 0.5rem 1rem;
-  background-color: #3498db;
-  color: white;
   text-decoration: none;
   border-radius: 4px;
-  transition: background-color 0.3s;
+  text-align: center;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.view-btn {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
 }
 
 .view-btn:hover {
-  background-color: #2980b9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(52, 152, 219, 0.2);
+}
+
+.edit-btn {
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  color: white;
+}
+
+.edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(106, 17, 203, 0.2);
 }
 
 .no-projects {
@@ -263,5 +350,93 @@ export default {
 
 .create-project-btn:hover {
   background-color: #45a049;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.2));
+  color: #ef4444;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.project-author {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.owner-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+  color: #6366f1;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.view-btn, .edit-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.view-btn {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.edit-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+}
+
+.view-btn:hover, .edit-btn:hover {
+  transform: translateY(-2px);
+}
+
+.edit-btn:hover {
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .project-actions {
+    flex-direction: column;
+  }
 }
 </style>

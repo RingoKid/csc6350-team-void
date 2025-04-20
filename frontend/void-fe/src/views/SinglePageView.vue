@@ -1,132 +1,211 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import StarRating from '../components/StarRating.vue'
 
 const route = useRoute()
-const projectId = route.params.id
-
-const projectTitle = ref('')
-const projectDescription = ref('')
-const rating = ref(0)
-const newComment = ref('')
-const newCommentRating = ref(5)
-const projectThumbnail = ref('')
-
+const router = useRouter()
+const project = ref(null)
+const error = ref(null)
 const feedbacks = ref([])
+const newComment = ref('')
+const isAuthenticated = ref(false)
+const currentUsername = ref('')
+const isSuperuser = ref(false)
 
-onMounted(async () => {
-  try {
-    const projectResponse = await fetch(`http://localhost:8000/api/projects/${projectId}/`)
-    if (!projectResponse.ok) {
-      throw new Error('Failed to fetch project details')
-    }
-    const projectData = await projectResponse.json()
-    projectTitle.value = projectData.title
-    projectDescription.value = projectData.description
-    rating.value = projectData.rating
-    projectThumbnail.value = projectData.thumbnail
-
-    const feedbackResponse = await fetch(`http://localhost:8000/api/projects/${projectId}/feedback/`)
-    if (!feedbackResponse.ok) {
-      throw new Error('Failed to fetch feedback')
-    }
-    const feedbackData = await feedbackResponse.json()
-    feedbacks.value = feedbackData
-  } catch (error) {
-    console.error('Error fetching project details or feedback:', error)
-  }
+onMounted(() => {
+  isAuthenticated.value = !!localStorage.getItem('access_token')
+  currentUsername.value = localStorage.getItem('username')
+  isSuperuser.value = localStorage.getItem('is_superuser') === 'true'
+  fetchProject()
+  fetchFeedback()
 })
 
-const addComment = () => {
-  if (newComment.value.trim()) {
-    feedbacks.value.push({
-      id: feedbacks.value.length + 1,
-      user: 0,
-      comment: newComment.value,
-      created_at: new Date().toISOString().split('T')[0]
+const canEditProject = computed(() => {
+  return isProjectOwner.value || isSuperuser.value
+})
+
+const isProjectOwner = computed(() => {
+  console.log('Current username:', currentUsername.value)
+  console.log('Project user:', project.value?.user)
+  return project.value && project.value.user === currentUsername.value
+})
+
+const fetchProject = async () => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/projects/${route.params.id}/`)
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.detail || 'Failed to fetch project')
+    }
+    const data = await response.json()
+    project.value = data
+    console.log('Project data:', data)
+    console.log('Is owner?', isProjectOwner.value)
+  } catch (error) {
+    console.error('Error fetching project:', error)
+    error.value = error.message
+  }
+}
+
+const fetchFeedback = async () => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/projects/${route.params.id}/feedback/`)
+    if (!response.ok) throw new Error('Failed to fetch feedback')
+    feedbacks.value = await response.json()
+  } catch (error) {
+    console.error('Error fetching feedback:', error)
+  }
+}
+
+const handleRatingUpdated = async () => {
+  await fetchProject()
+}
+
+const submitFeedback = async () => {
+  if (!newComment.value.trim() || !isAuthenticated.value) return
+
+  try {
+    const response = await fetch(`http://localhost:8000/api/feedbacks/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      },
+      body: JSON.stringify({
+        project: route.params.id,
+        comment: newComment.value
+      })
     })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.detail || 'Failed to submit feedback')
+    }
+    
+    // Clear the input and refresh feedbacks
     newComment.value = ''
-    newCommentRating.value = 5
+    await fetchFeedback()
+  } catch (error) {
+    console.error('Error submitting feedback:', error)
+    error.value = error.message
   }
 }
 </script>
 
 <template>
-    <div class="project-review">
+  <div class="single-page">
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
+    <div v-else-if="project" class="project-review">
       <div class="top-section">
         <div class="preview-section">
-          <img :src="projectThumbnail" alt="Project Thumbnail" class="preview-image" v-if="projectThumbnail" />
-          <div class="empty-preview" v-else>none</div>
+          <img v-if="project.thumbnail" :src="project.thumbnail" :alt="project.title" class="preview-image">
+          <div v-else class="empty-preview">No preview available</div>
         </div>
         <div class="details-section">
-          <h1>{{ projectTitle }}</h1>
-          <div class="rating">
-            <span class="stars">★★★★½</span>
-            <span class="rating-number">{{ rating }}/5.0</span>
+          <div class="project-header">
+            <h1>{{ project.title }}</h1>
+            <router-link 
+              v-if="canEditProject"
+              :to="'/edit-project/' + project.id"
+              class="edit-button"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              Edit Project
+            </router-link>
           </div>
-          <p class="description">{{ projectDescription }}</p>
+          <div class="project-meta">
+            <span>By {{ project.user }}</span>
+            <span>Category: {{ project.category }}</span>
+            <span v-if="isSuperuser" class="admin-badge">Admin View</span>
+          </div>
+          <p class="project-description">{{ project.description }}</p>
         </div>
       </div>
-  
+
       <!-- Feedback section -->
       <div class="comments-section">
         <h2>Feedback</h2>
+        <div v-if="isProjectOwner" class="owner-message">
+          <p>This is your project. You cannot submit feedback on your own project.</p>
+        </div>
+        <div v-else-if="isAuthenticated" class="comment-input">
+          <textarea 
+            v-model="newComment"
+            placeholder="Write your feedback..."
+            rows="3"
+          ></textarea>
+          <button @click="submitFeedback">Submit Feedback</button>
+        </div>
+        <div v-else class="login-message">
+          Please <router-link to="/login">login</router-link> to leave feedback
+        </div>
+
+        <div class="rating-section">
+          <h3>Project Rating</h3>
+          <div v-if="isProjectOwner" class="owner-rating-display">
+            <p class="owner-notice">This is your project</p>
+            <div class="stars">
+              <span v-for="i in 5" :key="i" class="star" 
+                    :class="{ 'filled': i <= Math.round(project.average_rating || 0) }">★</span>
+            </div>
+            <div class="rating-info">
+              <span v-if="project.average_rating">
+                Average Rating: {{ project.average_rating.toFixed(1) }}
+                <span class="rating-count">({{ project.rating_count }} ratings)</span>
+              </span>
+              <span v-else>No ratings yet</span>
+            </div>
+          </div>
+          <div v-else-if="!isAuthenticated" class="login-message">
+            Please <router-link to="/login">login</router-link> to rate this project
+          </div>
+          <div v-else>
+            <StarRating 
+              :project-id="project.id"
+              :average-rating="project.average_rating"
+              :rating-count="project.rating_count"
+              @rating-updated="handleRatingUpdated"
+            />
+          </div>
+        </div>
+
         <div class="comments-list">
           <div v-for="feedback in feedbacks" :key="feedback.id" class="comment">
             <div class="comment-header">
-              <span class="author">User ID: {{ feedback.user }}</span>
-              <span class="date">{{ feedback.created_at }}</span>
+              <span class="author">{{ feedback.user }}</span>
+              <span class="date">{{ new Date(feedback.created_at).toLocaleDateString() }}</span>
             </div>
-
             <p class="comment-content">{{ feedback.comment }}</p>
           </div>
-        </div>
-  
-        <div class="comment-input">
-          <textarea 
-            v-model="newComment"
-            placeholder="input a comment..."
-            rows="3"
-          ></textarea>
-          
-          <!-- Select Rate -->
-          <label>
-            Rating:
-            <select v-model="newCommentRating">
-              <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
-            </select>
-          </label>
-
-          <button @click="addComment">Submit</button>
+          <div v-if="!feedbacks.length" class="no-feedback">
+            No feedback yet
+          </div>
         </div>
       </div>
     </div>
-  </template>
+    <div v-else class="loading">
+      Loading project...
+    </div>
+  </div>
+</template>
 
 <style scoped>
-
-.comment-rating {
-  margin-bottom: 0.3rem;
-  color: #ffd700;
-}
-
-.empty-preview {
-  min-width: 500px;
-  font-size: 1.2rem;
-  color: #999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+.single-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
 }
 
 .project-review {
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
 }
 
 .top-section {
@@ -138,54 +217,45 @@ const addComment = () => {
   flex: 1;
   background: #f5f5f5;
   border-radius: 8px;
+  overflow: hidden;
+}
+
+.preview-image {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.empty-preview {
+  height: 300px;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 400px;
+  color: #666;
 }
 
 .details-section {
   flex: 1;
+}
+
+.project-meta {
+  display: flex;
+  gap: 1rem;
+  margin: 1rem 0;
+  color: #666;
+}
+
+.project-description {
+  margin: 1rem 0;
+  line-height: 1.6;
 }
 
 .comments-section {
   margin-top: 2rem;
 }
 
-.preview-image {
-  max-width: 100%;
-  height: auto;
-}
-
-.details-section {
-  flex: 1;
-}
-
-h1 {
-  margin: 0 0 1rem;
-  font-size: 2rem;
-}
-
-.rating {
-  margin-bottom: 1rem;
-}
-
-.stars {
-  color: #ffd700;
-  margin-right: 0.5rem;
-}
-
-.rating-number {
-  color: #666;
-}
-
-.description {
-  margin-bottom: 2rem;
-  line-height: 1.6;
-}
-
 .comments-list {
-  margin-bottom: 2rem;
+  margin: 1rem 0;
 }
 
 .comment {
@@ -214,30 +284,174 @@ h1 {
 }
 
 .comment-input {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  margin-top: 1rem;
 }
 
 textarea {
   width: 100%;
-  padding: 0.5rem;
+  padding: 0.8rem;
   border: 1px solid #ddd;
   border-radius: 4px;
+  margin-bottom: 1rem;
   resize: vertical;
 }
 
 button {
-  align-self: flex-end;
-  padding: 0.5rem 1rem;
+  padding: 0.8rem 1.5rem;
   background-color: #42b883;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 1rem;
 }
 
 button:hover {
   background-color: #3aa876;
+}
+
+.error-message {
+  color: #dc3545;
+  padding: 1rem;
+  margin: 1rem 0;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+}
+
+.login-message {
+  text-align: center;
+  padding: 1rem;
+  color: #666;
+}
+
+.login-message a {
+  color: #42b883;
+  text-decoration: none;
+}
+
+.login-message a:hover {
+  text-decoration: underline;
+}
+
+.rating-section {
+  margin: 2rem 0;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.rating-section h3 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.owner-rating-display {
+  text-align: center;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.stars {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.star {
+  font-size: 1.5rem;
+  color: #ddd;
+}
+
+.star.filled {
+  color: #ffd700;
+}
+
+.rating-info {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.rating-count {
+  color: #999;
+  margin-left: 0.3rem;
+}
+
+.owner-notice {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.owner-message {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+.no-feedback {
+  text-align: center;
+  padding: 1rem;
+  color: #666;
+  font-style: italic;
+}
+
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.edit-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.edit-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.edit-button svg {
+  transition: transform 0.3s ease;
+}
+
+.edit-button:hover svg {
+  transform: rotate(-15deg);
+}
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.2));
+  color: #ef4444;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-left: 8px;
 }
 </style>
