@@ -143,12 +143,18 @@ const handleRatingUpdated = async (newRating) => {
             {{ featuredProject.description }}
           </p>
           <div class="project-stats">
-            <StarRating
-              :project-id="featuredProject.id"
-              :average-rating="featuredProject.average_rating"
-              :rating-count="featuredProject.rating_count"
-              @rating-updated="handleRatingUpdated"
-            />
+            <div class="rating-display">
+              <span class="stars">
+                <span v-for="i in 5" 
+                      :key="i" 
+                      class="star"
+                      :class="{ 'filled': i <= Math.round(featuredProject.average_rating || 0) }">★</span>
+              </span>
+              <span class="rating-text">
+                {{ featuredProject.average_rating?.toFixed(1) || '0.0' }}
+                <span class="rating-count">({{ featuredProject.rating_count || 0 }} ratings)</span>
+              </span>
+            </div>
           </div>
           <router-link :to="'/project/' + featuredProject.id" class="view-project-btn">
             <span>View Project Details</span>
@@ -591,6 +597,38 @@ const handleRatingUpdated = async (newRating) => {
   padding: 16px 0;
   border-top: 1px solid rgba(0,0,0,0.1);
   border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.rating-display {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+}
+
+.stars {
+  display: flex;
+  gap: 2px;
+}
+
+.star {
+  color: #ddd;
+  font-size: 1.2rem;
+}
+
+.star.filled {
+  color: #ffd700;
+}
+
+.rating-text {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.rating-count {
+  color: #999;
+  font-size: 0.85rem;
+  margin-left: 0.3rem;
 }
 
 .view-project-btn {
