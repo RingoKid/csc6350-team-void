@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db.models import Avg
 
 # Custom User Model
 class User(AbstractUser):
@@ -33,6 +35,14 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def average_rating(self):
+        return self.ratings.aggregate(Avg('rating'))['rating__avg'] or 0
+
+    @property
+    def rating_count(self):
+        return self.ratings.count()
+
     def __str__(self):
         return self.title
 
@@ -48,13 +58,19 @@ class Feedback(models.Model):
 
 # Rating Model
 class Rating(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, related_name='ratings', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    creativity = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
-    technical_skills = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
-    impact = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
-    presentation = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
+    rating = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        default=1
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('project', 'user')  # Each user can rate a project only once
+
+    def __str__(self):
+        return f"{self.user.username}'s {self.rating}-star rating for {self.project.title}"
 
 # Reaction Model
 class Reaction(models.Model):

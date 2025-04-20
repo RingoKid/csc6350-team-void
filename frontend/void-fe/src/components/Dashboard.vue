@@ -23,11 +23,24 @@
             <p class="project-description">{{ project.description }}</p>
             <div class="project-meta">
               <span class="category">{{ project.category }}</span>
-              <span class="rating">★ {{ project.rating || 'No ratings yet' }}</span>
+              <div class="rating-display">
+                <span class="stars">
+                  <span v-for="i in 5" :key="i" class="star" 
+                        :class="{ 'filled': i <= Math.round(project.average_rating || 0) }">★</span>
+                </span>
+                <span class="rating-text" v-if="project.average_rating">
+                  {{ project.average_rating.toFixed(1) }}
+                  <span class="rating-count">({{ project.rating_count }})</span>
+                </span>
+                <span class="rating-text" v-else>No ratings yet</span>
+              </div>
             </div>
             <div class="project-actions">
               <router-link :to="{ name: 'SinglePageView', params: { id: project.id }}" class="view-btn">
                 View Details
+              </router-link>
+              <router-link :to="{ name: 'edit-project', params: { id: project.id }}" class="edit-btn">
+                Edit Project
               </router-link>
             </div>
           </div>
@@ -73,6 +86,9 @@ export default {
     const logout = () => {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user_id");
+      localStorage.removeItem("username");
+      window.dispatchEvent(new Event('auth-state-changed'));
       router.push("/login");
     };
 
@@ -197,27 +213,71 @@ export default {
   color: #666;
 }
 
-.rating {
-  color: #f39c12;
-  font-weight: bold;
+.rating-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stars {
+  display: flex;
+  gap: 2px;
+}
+
+.star {
+  color: #ddd;
+  font-size: 1rem;
+}
+
+.star.filled {
+  color: #ffd700;
+}
+
+.rating-text {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.rating-count {
+  color: #999;
+  font-size: 0.8rem;
 }
 
 .project-actions {
+  display: flex;
+  gap: 1rem;
   margin-top: 1rem;
 }
 
-.view-btn {
+.view-btn, .edit-btn {
+  flex: 1;
   display: inline-block;
   padding: 0.5rem 1rem;
-  background-color: #3498db;
-  color: white;
   text-decoration: none;
   border-radius: 4px;
-  transition: background-color 0.3s;
+  text-align: center;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.view-btn {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
 }
 
 .view-btn:hover {
-  background-color: #2980b9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(52, 152, 219, 0.2);
+}
+
+.edit-btn {
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  color: white;
+}
+
+.edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(106, 17, 203, 0.2);
 }
 
 .no-projects {

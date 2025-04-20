@@ -5,8 +5,9 @@ from .serializers import *
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework.decorators import action
+from django.shortcuts import get_object_or_404
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -15,6 +16,7 @@ class UserViewSet(viewsets.ModelViewSet):
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
@@ -25,6 +27,34 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def rate(self, request, pk=None):
+        project = self.get_object()
+        rating_value = request.data.get('rating')
+        
+        if not rating_value or not isinstance(rating_value, (int, float)) or not (1 <= rating_value <= 5):
+            return Response(
+                {'error': 'Please provide a valid rating between 1 and 5'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update or create the rating
+        rating, created = Rating.objects.update_or_create(
+            project=project,
+            user=request.user,
+            defaults={'rating': rating_value}
+        )
+
+        serializer = RatingSerializer(rating)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def ratings(self, request, pk=None):
+        project = self.get_object()
+        ratings = project.ratings.all()
+        serializer = RatingSerializer(ratings, many=True)
+        return Response(serializer.data)
 
 class FeedbackViewSet(viewsets.ModelViewSet):
     queryset = Feedback.objects.all()
@@ -81,6 +111,8 @@ class UserRegistrationView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ProjectFeedbackView(APIView):
+    permission_classes = [AllowAny]
+    
     def get(self, request, project_id):
         feedbacks = Feedback.objects.filter(project_id=project_id)
         serializer = FeedbackSerializer(feedbacks, many=True)
