@@ -9,7 +9,7 @@
       Loading project details...
     </div>
 
-    <div v-else-if="!isOwner" class="error-message">
+    <div v-else-if="!isOwner && !isSuperuser" class="error-message">
       <i class="fas fa-exclamation-circle"></i>
       You don't have permission to edit this project.
     </div>
@@ -102,6 +102,7 @@ export default {
     const successMessage = ref('');
     const loading = ref(true);
     const isOwner = ref(false);
+    const isSuperuser = ref(false);
     const categories = ref([
       'Hackathon',
       'Class Project',
@@ -116,7 +117,6 @@ export default {
     });
 
     const fetchProject = async () => {
-      loading.value = true;
       try {
         const response = await fetch(`http://localhost:8000/api/projects/${route.params.id}/`, {
           headers: {
@@ -124,29 +124,59 @@ export default {
           }
         });
 
+        if (response.status === 401) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user_id');
+          router.push('/login');
+          return;
+        }
+
         if (!response.ok) {
           throw new Error('Failed to fetch project details');
         }
 
         const data = await response.json();
-        project.value = {
-          title: data.title,
-          description: data.description,
-          category: data.category,
-          thumbnail: data.thumbnail || '',
-          video_url: data.video_url || ''
-        };
+        console.log('Project Data:', data);
+        project.value = data;
 
-        // Check if current user is the owner
+        // Check if current user is the owner or a superuser
         const currentUsername = localStorage.getItem('username');
-        isOwner.value = data.user === currentUsername;
+        console.log('Current Username:', currentUsername);
+        
+        // Get the owner's username
+        const ownerUsername = data.user;
+        console.log('Project Owner Username:', ownerUsername);
+        
+        if (!ownerUsername) {
+          throw new Error('Could not determine project owner');
+        }
+        
+        // Compare usernames
+        isOwner.value = currentUsername === ownerUsername;
+        console.log('Is Owner:', isOwner.value);
+        
+        // Fetch user details to check superuser status
+        const userResponse = await fetch(`http://localhost:8000/api/users/${localStorage.getItem('user_id')}/`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          }
+        });
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          isSuperuser.value = userData.is_superuser;
+          console.log('Is Superuser:', isSuperuser.value);
+        }
 
-        if (!isOwner.value) {
+        // Allow access if user is owner or superuser
+        if (!isOwner.value && !isSuperuser.value) {
+          console.log('Redirecting to dashboard - Not owner or superuser');
           router.push('/dashboard');
         }
       } catch (error) {
         console.error('Error fetching project:', error);
-        errorMessage.value = 'Failed to load project details. Please try again.';
+        errorMessage.value = 'Failed to load project details';
       } finally {
         loading.value = false;
       }
@@ -190,11 +220,11 @@ export default {
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            title: project.value.title.trim(),
-            description: project.value.description.trim(),
-            category: project.value.category,
-            thumbnail: project.value.thumbnail.trim() || null,
-            video_url: project.value.video_url.trim() || null
+            title: project.value.title?.trim() || '',
+            description: project.value.description?.trim() || '',
+            category: project.value.category || '',
+            thumbnail: project.value.thumbnail?.trim() || null,
+            video_url: project.value.video_url?.trim() || null
           })
         });
 
@@ -236,6 +266,7 @@ export default {
       successMessage,
       loading,
       isOwner,
+      isSuperuser,
       updateProject
     };
   }

@@ -1,21 +1,28 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import StarRating from '../components/StarRating.vue'
 
 const route = useRoute()
+const router = useRouter()
 const project = ref(null)
 const error = ref(null)
 const feedbacks = ref([])
 const newComment = ref('')
 const isAuthenticated = ref(false)
 const currentUsername = ref('')
+const isSuperuser = ref(false)
 
 onMounted(() => {
   isAuthenticated.value = !!localStorage.getItem('access_token')
   currentUsername.value = localStorage.getItem('username')
+  isSuperuser.value = localStorage.getItem('is_superuser') === 'true'
   fetchProject()
   fetchFeedback()
+})
+
+const canEditProject = computed(() => {
+  return isProjectOwner.value || isSuperuser.value
 })
 
 const isProjectOwner = computed(() => {
@@ -98,10 +105,24 @@ const submitFeedback = async () => {
           <div v-else class="empty-preview">No preview available</div>
         </div>
         <div class="details-section">
-          <h1>{{ project.title }}</h1>
+          <div class="project-header">
+            <h1>{{ project.title }}</h1>
+            <router-link 
+              v-if="canEditProject"
+              :to="'/edit-project/' + project.id"
+              class="edit-button"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              Edit Project
+            </router-link>
+          </div>
           <div class="project-meta">
             <span>By {{ project.user }}</span>
             <span>Category: {{ project.category }}</span>
+            <span v-if="isSuperuser" class="admin-badge">Admin View</span>
           </div>
           <p class="project-description">{{ project.description }}</p>
         </div>
@@ -387,5 +408,50 @@ button:hover {
   padding: 1rem;
   color: #666;
   font-style: italic;
+}
+
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.edit-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.edit-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.edit-button svg {
+  transition: transform 0.3s ease;
+}
+
+.edit-button:hover svg {
+  transform: rotate(-15deg);
+}
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.2));
+  color: #ef4444;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-left: 8px;
 }
 </style>

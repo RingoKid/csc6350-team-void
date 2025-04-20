@@ -99,8 +99,8 @@ export default {
         }
 
         localStorage.setItem("user_id", currentUser.id);
-        // Store username in localStorage
         localStorage.setItem("username", username.value);
+        localStorage.setItem("is_superuser", currentUser.is_superuser ? 'true' : 'false');
         // Emit a custom event for login
         window.dispatchEvent(new Event('auth-state-changed'));
         // Redirect to dashboard
