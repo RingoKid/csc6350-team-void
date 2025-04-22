@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard-container">
     <div class="dashboard-header">
-      <h1>Welcome to Your Dashboard</h1>
+      <h1>Welcome, {{ currentUsername }}!</h1>
       <p v-if="isSuperuser">Admin Dashboard - Manage All Projects</p>
       <p v-else>Manage and view your projects</p>
       <div class="header-actions">

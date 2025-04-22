@@ -8,6 +8,7 @@ import ProjectList from "../components/ProjectList.vue";
 import Blog from "../components/Blog.vue";
 import CreateProject from '../components/CreateProject.vue'
 import EditProject from '../components/EditProject.vue'
+import SignUp from '../components/SignUp.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -91,6 +92,11 @@ const router = createRouter({
           next("/login");
         }
       },
+    },
+    {
+      path: '/signup',
+      name: 'signup',
+      component: SignUp
     }
   ],
 })

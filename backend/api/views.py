@@ -37,6 +37,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             permission_classes = [AllowAny]
+        elif self.action in ['rate']:
+            permission_classes = [IsAuthenticated]
         else:
             permission_classes = [IsAuthenticated, IsOwnerOrSuperuser]
         return [permission() for permission in permission_classes]
@@ -119,6 +121,8 @@ class ProjectSearchView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class UserRegistrationView(APIView):
+    permission_classes = [AllowAny]
+    
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():

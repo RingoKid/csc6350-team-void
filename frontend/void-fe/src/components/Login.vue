@@ -32,9 +32,8 @@
             />
           </div>
         </div>
-        <button type="submit" class="login-button">
-          Sign In
-          <i class="fas fa-arrow-right"></i>
+        <button type="submit" class="login-button" :disabled="loading">
+          {{ loading ? 'Logging in...' : 'Login' }}
         </button>
       </form>
       <p v-if="errorMessage" class="error">
@@ -42,7 +41,9 @@
         {{ errorMessage }}
       </p>
       <div class="login-footer">
-        <p>Don't have an account? <router-link to="/register" class="register-link">Sign up</router-link></p>
+        <div class="signup-link">
+          Don't have an account? <router-link to="/signup">Sign up</router-link>
+        </div>
       </div>
     </div>
   </div>
@@ -58,9 +59,11 @@ export default {
     const username = ref("");
     const password = ref("");
     const errorMessage = ref("");
+    const loading = ref(false);
 
     const login = async () => {
       try {
+        loading.value = true;
         const response = await fetch("http://127.0.0.1:8000/api/token/", {
           method: "POST",
           headers: {
@@ -107,6 +110,8 @@ export default {
         router.push("/dashboard");
       } catch (error) {
         errorMessage.value = error.message || "An error occurred. Please try again.";
+      } finally {
+        loading.value = false;
       }
     };
 
@@ -115,6 +120,7 @@ export default {
       password,
       errorMessage,
       login,
+      loading,
     };
   },
 };
@@ -248,15 +254,20 @@ export default {
   color: #666;
 }
 
-.register-link {
-  color: #6a11cb;
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.2s ease;
+.signup-link {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
 }
 
-.register-link:hover {
-  color: #2575fc;
+.signup-link a {
+  color: #4CAF50;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.signup-link a:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 480px) {
