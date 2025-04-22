@@ -15,7 +15,7 @@ router.register('reactions', views.ReactionViewSet)
 router.register('collaborations', views.CollaborationViewSet)
 router.register('notifications', views.NotificationViewSet)
 router.register('searchlogs', views.SearchLogViewSet)
-router.register('reports', views.ReportViewSet)
+router.register(r'reported-feedback', views.ReportedFeedbackViewSet, basename='reported-feedback')
 
 
 urlpatterns = [

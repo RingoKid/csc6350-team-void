@@ -10,6 +10,11 @@
       </div>
     </div>
 
+    <!-- Reported Feedback Panel for Superusers -->
+    <div v-if="isSuperuser" class="reported-feedback-section">
+      <ReportedFeedbackPanel />
+    </div>
+
     <div class="projects-section">
       <div class="section-header">
         <h2>{{ isSuperuser ? 'All Projects' : 'Your Projects' }}</h2>
@@ -72,8 +77,12 @@
 <script>
 import { useRouter } from "vue-router";
 import { ref, onMounted } from 'vue';
+import ReportedFeedbackPanel from './ReportedFeedbackPanel.vue';
 
 export default {
+  components: {
+    ReportedFeedbackPanel
+  },
   setup() {
     const router = useRouter();
     const projects = ref([]);
@@ -438,5 +447,13 @@ export default {
   .project-actions {
     flex-direction: column;
   }
+}
+
+.reported-feedback-section {
+  margin: 2rem 0;
+  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 </style>
