@@ -37,21 +37,75 @@ const fetchFeedback = async () => {
   }
 }
 
+const refreshToken = async () => {
+  try {
+    const refreshToken = localStorage.getItem('refresh_token')
+    if (!refreshToken) {
+      throw new Error('No refresh token available')
+    }
+
+    const response = await fetch('http://localhost:8000/api/token/refresh/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        refresh: refreshToken
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to refresh token')
+    }
+
+    const data = await response.json()
+    localStorage.setItem('access_token', data.access)
+    return data.access
+  } catch (error) {
+    console.error('Error refreshing token:', error)
+    // Clear tokens and redirect to login
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('user_id')
+    localStorage.removeItem('username')
+    window.dispatchEvent(new Event('auth-state-changed'))
+    throw error
+  }
+}
+
 const submitFeedback = async () => {
   if (!newComment.value.trim() || !isAuthenticated.value) return
 
   try {
-    const response = await fetch(`http://localhost:8000/api/feedbacks/`, {
+    let token = localStorage.getItem('access_token')
+    let response = await fetch(`http://localhost:8000/api/projects/${props.projectId}/feedback/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
         project: props.projectId,
         comment: newComment.value
       })
     })
+
+    // If token is expired, try to refresh it
+    if (response.status === 401) {
+      token = await refreshToken()
+      // Retry the request with the new token
+      response = await fetch(`http://localhost:8000/api/projects/${props.projectId}/feedback/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          project: props.projectId,
+          comment: newComment.value
+        })
+      })
+    }
 
     if (!response.ok) {
       const errorData = await response.json()
@@ -63,6 +117,10 @@ const submitFeedback = async () => {
   } catch (error) {
     console.error('Error submitting feedback:', error)
     error.value = error.message
+    if (error.message.includes('No refresh token available') || error.message.includes('Failed to refresh token')) {
+      // Redirect to login if token refresh fails
+      window.location.href = '/login'
+    }
   }
 }
 

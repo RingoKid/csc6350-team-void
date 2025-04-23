@@ -10,8 +10,9 @@
       </div>
     </div>
 
-    <!-- Reported Feedback Panel for Superusers -->
-    <div v-if="isSuperuser" class="reported-feedback-section">
+    <!-- Admin Panels -->
+    <div v-if="isSuperuser" class="admin-panels">
+      <ReportedProjectsPanel />
       <ReportedFeedbackPanel />
     </div>
 
@@ -78,10 +79,12 @@
 import { useRouter } from "vue-router";
 import { ref, onMounted } from 'vue';
 import ReportedFeedbackPanel from './ReportedFeedbackPanel.vue';
+import ReportedProjectsPanel from './ReportedProjectsPanel.vue';
 
 export default {
   components: {
-    ReportedFeedbackPanel
+    ReportedFeedbackPanel,
+    ReportedProjectsPanel
   },
   setup() {
     const router = useRouter();
@@ -449,11 +452,10 @@ export default {
   }
 }
 
-.reported-feedback-section {
+.admin-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
   margin: 2rem 0;
-  padding: 2rem;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 </style>

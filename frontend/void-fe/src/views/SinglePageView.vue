@@ -3,18 +3,31 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import StarRating from '../components/StarRating.vue'
 import ProjectFeedback from '../components/ProjectFeedback.vue'
+import ReportButton from '../components/ReportButton.vue'
+import { marked } from 'marked'
 
 const route = useRoute()
 const router = useRouter()
 const project = ref(null)
 const error = ref(null)
 const isAuthenticated = ref(false)
-const currentUsername = ref('')
-const isSuperuser = ref(false)
+const currentUsername = ref(localStorage.getItem('username'))
+const isSuperuser = ref(localStorage.getItem('is_superuser') === 'true')
+
+// Configure marked options
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
+
+// Computed property to convert markdown to HTML
+const renderedDescription = computed(() => {
+  if (!project.value?.description) return ''
+  return marked(project.value.description)
+})
 
 onMounted(() => {
   isAuthenticated.value = !!localStorage.getItem('access_token')
-  currentUsername.value = localStorage.getItem('username')
   isSuperuser.value = localStorage.getItem('is_superuser') === 'true'
   fetchProject()
 })
@@ -61,24 +74,27 @@ const handleRatingUpdated = async () => {
         <div class="details-section">
           <div class="project-header">
             <h1>{{ project.title }}</h1>
-            <router-link 
-              v-if="canEditProject"
-              :to="'/edit-project/' + project.id"
-              class="edit-button"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-              Edit Project
-            </router-link>
+            <div class="project-actions">
+              <router-link 
+                v-if="isSuperuser || project.user === currentUsername"
+                :to="{ name: 'edit-project', params: { id: project.id }}" 
+                class="edit-btn"
+              >
+                Edit Project
+              </router-link>
+              <ReportButton 
+                v-if="project.user !== currentUsername"
+                :project-id="project.id"
+                class="report-btn"
+              />
+            </div>
           </div>
           <div class="project-meta">
             <span>By {{ project.user }}</span>
             <span>Category: {{ project.category }}</span>
             <span v-if="isSuperuser" class="admin-badge">Admin View</span>
           </div>
-          <p class="project-description">{{ project.description }}</p>
+          <div class="project-description markdown-content" v-html="renderedDescription"></div>
         </div>
       </div>
 
@@ -195,22 +211,44 @@ const handleRatingUpdated = async () => {
   line-height: 1.2;
 }
 
-.edit-button {
+.project-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.edit-btn, .report-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: white;
+  border-radius: 6px;
   text-decoration: none;
-  border-radius: 8px;
   font-weight: 500;
   transition: all 0.3s ease;
 }
 
-.edit-button:hover {
+.edit-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+}
+
+.report-btn {
+  background: white;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+.edit-btn:hover, .report-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.edit-btn:hover {
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.report-btn:hover {
+  background: #fee2e2;
 }
 
 .project-meta {
@@ -316,9 +354,110 @@ const handleRatingUpdated = async () => {
     font-size: 2rem;
   }
 
-  .edit-button {
+  .edit-btn, .report-btn {
     width: 100%;
     justify-content: center;
   }
+}
+
+.markdown-content {
+  color: #4b5563;
+  line-height: 1.8;
+  font-size: 1.1rem;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  color: #1f2937;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.markdown-content h1 { font-size: 2em; }
+.markdown-content h2 { font-size: 1.5em; }
+.markdown-content h3 { font-size: 1.25em; }
+.markdown-content h4 { font-size: 1.1em; }
+.markdown-content h5 { font-size: 1em; }
+.markdown-content h6 { font-size: 0.9em; }
+
+.markdown-content p {
+  margin-bottom: 1em;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-bottom: 1em;
+  padding-left: 2em;
+}
+
+.markdown-content li {
+  margin-bottom: 0.5em;
+}
+
+.markdown-content code {
+  background-color: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.markdown-content pre {
+  background-color: #f3f4f6;
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin-bottom: 1em;
+}
+
+.markdown-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  margin-left: 0;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.markdown-content a {
+  color: #6366f1;
+  text-decoration: none;
+}
+
+.markdown-content a:hover {
+  text-decoration: underline;
+}
+
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 1em 0;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1em;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5em;
+  text-align: left;
+}
+
+.markdown-content th {
+  background-color: #f9fafb;
+  font-weight: 600;
 }
 </style>
