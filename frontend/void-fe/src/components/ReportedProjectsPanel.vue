@@ -68,6 +68,10 @@ const deleteProject = async (reportId) => {
   if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) return
 
   try {
+    // First resolve the report
+    await resolveReport(reportId)
+
+    // Then delete the project
     const response = await fetch(`http://localhost:8000/api/reported-projects/${reportId}/delete_project/`, {
       method: 'POST',
       headers: {
@@ -81,7 +85,15 @@ const deleteProject = async (reportId) => {
       console.error('Delete project error:', errorData)
       throw new Error(errorData.detail || `Failed to delete project: ${response.status}`)
     }
+
+    // Update the local state to reflect the deleted project
+    const report = reportedProjects.value.find(r => r.id === reportId)
+    if (report) {
+      report.project = null
+      report.is_resolved = true
+    }
     
+    // Refresh the list to get the latest state from the server
     await fetchReportedProjects()
   } catch (error) {
     console.error('Error deleting project:', error)
@@ -121,9 +133,16 @@ const formatDate = (dateString) => {
       <div v-for="report in reportedProjects" :key="report.id" class="report-card">
         <div class="report-header">
           <h3>
-            <router-link :to="{ name: 'SinglePageView', params: { id: report.project.id }}" class="project-link">
+            <router-link 
+              v-if="report.project" 
+              :to="{ name: 'SinglePageView', params: { id: report.project.id }}" 
+              class="project-link"
+            >
               {{ report.project.title }}
             </router-link>
+            <span v-else class="deleted-project">
+              Project Deleted
+            </span>
           </h3>
           <span class="report-status" :class="{ 'resolved': report.is_resolved }">
             {{ report.is_resolved ? 'Resolved' : 'Pending' }}
@@ -138,11 +157,11 @@ const formatDate = (dateString) => {
           <div v-if="report.is_resolved" class="resolution-details">
             <span>Resolved by: {{ report.resolved_by }}</span>
             <span>Date: {{ formatDate(report.resolved_at) }}</span>
+            <span v-if="!report.project" class="deletion-note">Project was deleted</span>
           </div>
         </div>
-        <div class="report-actions">
+        <div class="report-actions" v-if="!report.is_resolved">
           <button 
-            v-if="!report.is_resolved" 
             @click="resolveReport(report.id)" 
             class="resolve-btn"
             :disabled="isResolving"
@@ -150,7 +169,6 @@ const formatDate = (dateString) => {
             Resolve Report
           </button>
           <button 
-            v-if="!report.is_resolved" 
             @click="deleteProject(report.id)" 
             class="delete-btn"
             :disabled="isDeleting"
@@ -241,6 +259,11 @@ const formatDate = (dateString) => {
   color: #6366f1;
 }
 
+.deleted-project {
+  color: #ef4444;
+  font-weight: 600;
+}
+
 .report-status {
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
@@ -307,6 +330,11 @@ const formatDate = (dateString) => {
 .resolve-btn:disabled, .delete-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.deletion-note {
+  color: #ef4444;
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {

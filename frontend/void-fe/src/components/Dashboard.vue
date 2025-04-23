@@ -37,7 +37,6 @@
               <span>By {{ project.user }}</span>
               <span v-if="project.user === currentUsername" class="owner-badge">Owner</span>
             </div>
-            <p class="project-description">{{ project.description }}</p>
             <div class="project-meta">
               <span class="category">{{ project.category }}</span>
               <div class="rating-display">
@@ -225,16 +224,32 @@ export default {
   font-size: 1.3rem;
   color: #2c3e50;
   margin-bottom: 0.5rem;
-}
-
-.project-description {
-  color: #666;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
+  min-height: 3.2rem;
+  line-height: 1.2;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.project-author {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.owner-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+  color: #6366f1;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .project-meta {
@@ -388,56 +403,6 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
-}
-
-.project-author {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.owner-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 6px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
-  color: #6366f1;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.view-btn, .edit-btn {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.view-btn {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.edit-btn {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: white;
-}
-
-.view-btn:hover, .edit-btn:hover {
-  transform: translateY(-2px);
-}
-
-.edit-btn:hover {
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 @media (max-width: 768px) {

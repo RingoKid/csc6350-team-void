@@ -118,6 +118,9 @@ const formatDate = (dateString) => {
             <div class="report-info">
               <span class="reporter">Reported by: {{ report.reporter }}</span>
               <span class="report-date">{{ formatDate(report.created_at) }}</span>
+              <span class="report-status" :class="{ 'resolved': report.is_resolved }">
+                {{ report.is_resolved ? 'Resolved' : 'Pending' }}
+              </span>
             </div>
           </div>
           
@@ -129,8 +132,13 @@ const formatDate = (dateString) => {
             <strong>Reason:</strong>
             <p>{{ report.reason }}</p>
           </div>
+
+          <div v-if="report.is_resolved" class="resolution-details">
+            <span>Resolved by: {{ report.resolved_by }}</span>
+            <span>Date: {{ formatDate(report.resolved_at) }}</span>
+          </div>
           
-          <div class="report-actions">
+          <div v-if="!report.is_resolved" class="report-actions">
             <button @click="resolveReport(report.id)" class="resolve">
               Mark as Resolved
             </button>
@@ -206,6 +214,24 @@ const formatDate = (dateString) => {
   font-size: 0.9rem;
 }
 
+.report-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.report-status:not(.resolved) {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.report-status.resolved {
+  background: #dcfce7;
+  color: #22c55e;
+}
+
 .feedback-content {
   color: #4b5563;
   line-height: 1.6;
@@ -231,6 +257,17 @@ const formatDate = (dateString) => {
 .report-reason p {
   color: #78350f;
   line-height: 1.6;
+}
+
+.resolution-details {
+  display: flex;
+  gap: 1rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #f3f4f6;
+  border-radius: 6px;
 }
 
 .report-actions {

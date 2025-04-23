@@ -4,14 +4,15 @@
       <img :src="project.thumbnail || 'https://via.placeholder.com/300x200'" :alt="project.title" />
     </div>
     <div class="project-content">
-      <h3>{{ project.title }}</h3>
-      <div class="project-author">
-        <span>By {{ project.user }}</span>
-        <span v-if="project.user === currentUsername" class="owner-badge">Owner</span>
+      <div class="project-header">
+        <h3>{{ project.title }}</h3>
+        <span class="project-author">by {{ project.author }}</span>
       </div>
-      <p class="project-description">{{ project.description }}</p>
-      <div class="project-meta">
-        <span class="category">{{ project.category }}</span>
+      <div class="project-category">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg>
+        {{ project.category }}
+      </div>
+      <div class="project-stats">
         <div class="rating-display">
           <span class="stars">
             <span v-for="i in 5" :key="i" class="star" 
@@ -94,35 +95,64 @@ const props = defineProps({
   padding: 1.5rem;
 }
 
-.project-content h3 {
-  font-size: 1.3rem;
-  color: #2c3e50;
+.project-header {
   margin-bottom: 0.5rem;
 }
 
-.project-description {
+.project-header h3 {
+  font-size: 1.3rem;
+  color: #2c3e50;
+}
+
+.project-author {
   color: #666;
   font-size: 0.9rem;
-  margin-bottom: 1rem;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
-.project-meta {
+.project-category {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
-.category {
-  background-color: #f0f0f0;
-  padding: 0.3rem 0.8rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: #666;
+.project-category svg {
+  width: 16px;
+  height: 16px;
+}
+
+.project-category svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.project-category svg circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.project-category svg path:first-child {
+  d: path("M4 11a9 9 0 0 1 9 9");
+}
+
+.project-category svg path:last-child {
+  d: path("M4 4a16 16 0 0 1 16 16");
+}
+
+.project-category svg circle {
+  cx: 5;
+  cy: 19;
+  r: 1;
+}
+
+.project-stats {
+  margin-bottom: 1rem;
 }
 
 .rating-display {
@@ -199,26 +229,6 @@ const props = defineProps({
 
 .report-btn:hover {
   background: #fee2e2;
-}
-
-.project-author {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.owner-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 6px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
-  color: #6366f1;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
 }
 
 @media (max-width: 768px) {

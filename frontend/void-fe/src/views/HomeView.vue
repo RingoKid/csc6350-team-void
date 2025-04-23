@@ -139,9 +139,6 @@ const handleRatingUpdated = async (newRating) => {
               {{ featuredProject.category }}
             </span>
           </div>
-          <p class="project-description">
-            {{ featuredProject.description }}
-          </p>
           <div class="project-stats">
             <div class="rating-display">
               <span class="stars">

@@ -279,17 +279,19 @@ const formatDate = (dateString) => {
           <div v-else class="feedback-content">
             <p>{{ feedback.comment }}</p>
             <div class="feedback-actions">
-              <div v-if="feedback.user === currentUsername">
+              <div v-if="feedback.user === currentUsername" class="action-buttons">
                 <button @click="startEditing(feedback)" class="edit">
                   Edit
                 </button>
-                <button @click="deleteFeedback(feedback.id)" class="delete">
+              </div>
+              <div class="action-buttons">
+                <button v-if="feedback.user === currentUsername" @click="deleteFeedback(feedback.id)" class="delete">
                   Delete
                 </button>
+                <button v-else @click="reportFeedback(feedback.id)" class="report">
+                  Report
+                </button>
               </div>
-              <button v-else @click="reportFeedback(feedback.id)" class="report">
-                Report
-              </button>
             </div>
           </div>
         </div>
@@ -467,8 +469,14 @@ const formatDate = (dateString) => {
 
 .feedback-actions {
   display: flex;
-  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 1rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .feedback-actions button {
