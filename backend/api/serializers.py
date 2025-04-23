@@ -115,3 +115,20 @@ class ReportedFeedbackSerializer(serializers.ModelSerializer):
         feedback_id = validated_data.pop('feedback_id')
         feedback = Feedback.objects.get(id=feedback_id)
         return ReportedFeedback.objects.create(feedback=feedback, **validated_data)
+
+class ReportedProjectSerializer(serializers.ModelSerializer):
+    project = ProjectSerializer(read_only=True)
+    reporter = serializers.ReadOnlyField(source='reporter.username')
+    resolved_by = serializers.ReadOnlyField(source='resolved_by.username', allow_null=True)
+    project_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = ReportedProject
+        fields = ['id', 'project', 'project_id', 'reporter', 'reason', 'created_at', 'is_resolved', 'resolved_by', 'resolved_at']
+        read_only_fields = ['id', 'created_at', 'resolved_by', 'resolved_at']
+        depth = 1
+
+    def create(self, validated_data):
+        project_id = validated_data.pop('project_id')
+        project = Project.objects.get(id=project_id)
+        return ReportedProject.objects.create(project=project, **validated_data)

@@ -230,3 +230,65 @@ class ReportedFeedbackViewSet(viewsets.ModelViewSet):
                 {"detail": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class ReportedProjectViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ReportedProjectSerializer
+    queryset = ReportedProject.objects.all()
+
+    def get_queryset(self):
+        if self.request.user.is_superuser:
+            return ReportedProject.objects.all().select_related('project', 'reporter', 'resolved_by')
+        return ReportedProject.objects.filter(reporter=self.request.user).select_related('project', 'reporter', 'resolved_by')
+
+    def perform_create(self, serializer):
+        serializer.save(reporter=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def resolve(self, request, pk=None):
+        try:
+            report = self.get_object()
+            if not request.user.is_superuser:
+                return Response(
+                    {"detail": "Only superusers can resolve reports"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            report.is_resolved = True
+            report.resolved_by = request.user
+            report.resolved_at = timezone.now()
+            report.save()
+            
+            return Response(self.get_serializer(report).data)
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
+    def delete_project(self, request, pk=None):
+        try:
+            report = self.get_object()
+            if not request.user.is_superuser:
+                return Response(
+                    {"detail": "Only superusers can delete projects"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # First mark the report as resolved
+            report.is_resolved = True
+            report.resolved_by = request.user
+            report.resolved_at = timezone.now()
+            report.save()
+            
+            # Then delete the associated project
+            project = report.project
+            project.delete()
+            
+            return Response({"detail": "Project deleted successfully"})
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

@@ -16,6 +16,7 @@ router.register('collaborations', views.CollaborationViewSet)
 router.register('notifications', views.NotificationViewSet)
 router.register('searchlogs', views.SearchLogViewSet)
 router.register(r'reported-feedback', views.ReportedFeedbackViewSet, basename='reported-feedback')
+router.register(r'reported-projects', views.ReportedProjectViewSet, basename='reported-projects')
 
 
 urlpatterns = [
