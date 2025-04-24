@@ -10,7 +10,8 @@ const formData = ref({
   title: '',
   description: '',
   category: '',
-  thumbnail: null
+  thumbnail: null,
+  video_url: ''
 })
 const error = ref(null)
 const isSubmitting = ref(false)
@@ -46,7 +47,8 @@ onMounted(async () => {
       title: data.title,
       description: data.description,
       category: data.category,
-      thumbnail: null
+      thumbnail: null,
+      video_url: data.video_url
     }
   } catch (err) {
     console.error('Error fetching project:', err)
@@ -64,6 +66,9 @@ const handleSubmit = async (e) => {
     formDataToSend.append('title', formData.value.title)
     formDataToSend.append('description', formData.value.description)
     formDataToSend.append('category', formData.value.category)
+    if (formData.value.video_url) {
+      formDataToSend.append('video_url', formData.value.video_url)
+    }
     if (formData.value.thumbnail) {
       formDataToSend.append('thumbnail', formData.value.thumbnail)
     }
@@ -167,6 +172,16 @@ const handleFileChange = (e) => {
           <p>Current thumbnail:</p>
           <img :src="project.thumbnail" :alt="project.title" class="thumbnail-preview">
         </div>
+      </div>
+
+      <div class="form-group">
+        <label for="video_url">Video URL (Optional)</label>
+        <input
+          type="url"
+          id="video_url"
+          v-model="formData.video_url"
+          placeholder="Enter YouTube video URL"
+        >
       </div>
 
       <div class="preview-section">

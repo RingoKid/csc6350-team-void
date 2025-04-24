@@ -58,6 +58,18 @@ const fetchProject = async () => {
 const handleRatingUpdated = async () => {
   await fetchProject()
 }
+
+const getEmbeddedVideoUrl = (url) => {
+  // Extract video ID from various YouTube URL formats
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  const videoId = (match && match[2].length === 11) ? match[2] : null;
+  
+  if (videoId) {
+    return `https://www.youtube.com/embed/${videoId}`;
+  }
+  return url; // Fallback to original URL if not a valid YouTube URL
+}
 </script>
 
 <template>
@@ -95,6 +107,18 @@ const handleRatingUpdated = async () => {
             <span v-if="isSuperuser" class="admin-badge">Admin View</span>
           </div>
           <div class="project-description markdown-content" v-html="renderedDescription"></div>
+        </div>
+      </div>
+
+      <div v-if="project.video_url" class="project-video">
+        <h3>Project Video</h3>
+        <div class="video-container">
+          <iframe
+            :src="getEmbeddedVideoUrl(project.video_url)"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+          ></iframe>
         </div>
       </div>
 
@@ -459,5 +483,36 @@ const handleRatingUpdated = async () => {
 .markdown-content th {
   background-color: #f9fafb;
   font-weight: 600;
+}
+
+.project-video {
+  margin: 2rem;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.project-video h3 {
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+
+.video-container {
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+  height: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
 }
 </style>
