@@ -1,13 +1,19 @@
 <template>
   <div class="dashboard-container">
     <div class="dashboard-header">
-      <h1>Welcome to Your Dashboard</h1>
+      <h1>Welcome, {{ currentUsername }}!</h1>
       <p v-if="isSuperuser">Admin Dashboard - Manage All Projects</p>
       <p v-else>Manage and view your projects</p>
       <div class="header-actions">
         <span v-if="isSuperuser" class="admin-badge">Admin View</span>
         <button class="logout-btn" @click="logout">Logout</button>
       </div>
+    </div>
+
+    <!-- Admin Panels -->
+    <div v-if="isSuperuser" class="admin-panels">
+      <ReportedProjectsPanel />
+      <ReportedFeedbackPanel />
     </div>
 
     <div class="projects-section">
@@ -31,7 +37,6 @@
               <span>By {{ project.user }}</span>
               <span v-if="project.user === currentUsername" class="owner-badge">Owner</span>
             </div>
-            <p class="project-description">{{ project.description }}</p>
             <div class="project-meta">
               <span class="category">{{ project.category }}</span>
               <div class="rating-display">
@@ -72,8 +77,14 @@
 <script>
 import { useRouter } from "vue-router";
 import { ref, onMounted } from 'vue';
+import ReportedFeedbackPanel from './ReportedFeedbackPanel.vue';
+import ReportedProjectsPanel from './ReportedProjectsPanel.vue';
 
 export default {
+  components: {
+    ReportedFeedbackPanel,
+    ReportedProjectsPanel
+  },
   setup() {
     const router = useRouter();
     const projects = ref([]);
@@ -213,16 +224,32 @@ export default {
   font-size: 1.3rem;
   color: #2c3e50;
   margin-bottom: 0.5rem;
-}
-
-.project-description {
-  color: #666;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
+  min-height: 3.2rem;
+  line-height: 1.2;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.project-author {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.owner-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+  color: #6366f1;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .project-meta {
@@ -378,56 +405,6 @@ export default {
   margin-bottom: 2rem;
 }
 
-.project-author {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.owner-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 6px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
-  color: #6366f1;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.view-btn, .edit-btn {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.view-btn {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.edit-btn {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: white;
-}
-
-.view-btn:hover, .edit-btn:hover {
-  transform: translateY(-2px);
-}
-
-.edit-btn:hover {
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-}
-
 @media (max-width: 768px) {
   .section-header {
     flex-direction: column;
@@ -438,5 +415,12 @@ export default {
   .project-actions {
     flex-direction: column;
   }
+}
+
+.admin-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin: 2rem 0;
 }
 </style>

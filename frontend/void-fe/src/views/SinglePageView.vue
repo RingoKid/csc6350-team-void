@@ -2,23 +2,34 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import StarRating from '../components/StarRating.vue'
+import ProjectFeedback from '../components/ProjectFeedback.vue'
+import ReportButton from '../components/ReportButton.vue'
+import { marked } from 'marked'
 
 const route = useRoute()
 const router = useRouter()
 const project = ref(null)
 const error = ref(null)
-const feedbacks = ref([])
-const newComment = ref('')
 const isAuthenticated = ref(false)
-const currentUsername = ref('')
-const isSuperuser = ref(false)
+const currentUsername = ref(localStorage.getItem('username'))
+const isSuperuser = ref(localStorage.getItem('is_superuser') === 'true')
+
+// Configure marked options
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
+
+// Computed property to convert markdown to HTML
+const renderedDescription = computed(() => {
+  if (!project.value?.description) return ''
+  return marked(project.value.description)
+})
 
 onMounted(() => {
   isAuthenticated.value = !!localStorage.getItem('access_token')
-  currentUsername.value = localStorage.getItem('username')
   isSuperuser.value = localStorage.getItem('is_superuser') === 'true'
   fetchProject()
-  fetchFeedback()
 })
 
 const canEditProject = computed(() => {
@@ -26,8 +37,6 @@ const canEditProject = computed(() => {
 })
 
 const isProjectOwner = computed(() => {
-  console.log('Current username:', currentUsername.value)
-  console.log('Project user:', project.value?.user)
   return project.value && project.value.user === currentUsername.value
 })
 
@@ -40,21 +49,9 @@ const fetchProject = async () => {
     }
     const data = await response.json()
     project.value = data
-    console.log('Project data:', data)
-    console.log('Is owner?', isProjectOwner.value)
   } catch (error) {
     console.error('Error fetching project:', error)
     error.value = error.message
-  }
-}
-
-const fetchFeedback = async () => {
-  try {
-    const response = await fetch(`http://localhost:8000/api/projects/${route.params.id}/feedback/`)
-    if (!response.ok) throw new Error('Failed to fetch feedback')
-    feedbacks.value = await response.json()
-  } catch (error) {
-    console.error('Error fetching feedback:', error)
   }
 }
 
@@ -62,34 +59,16 @@ const handleRatingUpdated = async () => {
   await fetchProject()
 }
 
-const submitFeedback = async () => {
-  if (!newComment.value.trim() || !isAuthenticated.value) return
-
-  try {
-    const response = await fetch(`http://localhost:8000/api/feedbacks/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-      },
-      body: JSON.stringify({
-        project: route.params.id,
-        comment: newComment.value
-      })
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.detail || 'Failed to submit feedback')
-    }
-    
-    // Clear the input and refresh feedbacks
-    newComment.value = ''
-    await fetchFeedback()
-  } catch (error) {
-    console.error('Error submitting feedback:', error)
-    error.value = error.message
+const getEmbeddedVideoUrl = (url) => {
+  // Extract video ID from various YouTube URL formats
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  const videoId = (match && match[2].length === 11) ? match[2] : null;
+  
+  if (videoId) {
+    return `https://www.youtube.com/embed/${videoId}`;
   }
+  return url; // Fallback to original URL if not a valid YouTube URL
 }
 </script>
 
@@ -107,87 +86,73 @@ const submitFeedback = async () => {
         <div class="details-section">
           <div class="project-header">
             <h1>{{ project.title }}</h1>
-            <router-link 
-              v-if="canEditProject"
-              :to="'/edit-project/' + project.id"
-              class="edit-button"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-              Edit Project
-            </router-link>
+            <div class="project-actions">
+              <router-link 
+                v-if="isSuperuser || project.user === currentUsername"
+                :to="{ name: 'edit-project', params: { id: project.id }}" 
+                class="edit-btn"
+              >
+                Edit Project
+              </router-link>
+              <ReportButton 
+                v-if="project.user !== currentUsername"
+                :project-id="project.id"
+                class="report-btn"
+              />
+            </div>
           </div>
           <div class="project-meta">
             <span>By {{ project.user }}</span>
             <span>Category: {{ project.category }}</span>
             <span v-if="isSuperuser" class="admin-badge">Admin View</span>
           </div>
-          <p class="project-description">{{ project.description }}</p>
+          <div class="project-description markdown-content" v-html="renderedDescription"></div>
         </div>
       </div>
 
-      <!-- Feedback section -->
-      <div class="comments-section">
-        <h2>Feedback</h2>
-        <div v-if="isProjectOwner" class="owner-message">
-          <p>This is your project. You cannot submit feedback on your own project.</p>
-        </div>
-        <div v-else-if="isAuthenticated" class="comment-input">
-          <textarea 
-            v-model="newComment"
-            placeholder="Write your feedback..."
-            rows="3"
-          ></textarea>
-          <button @click="submitFeedback">Submit Feedback</button>
-        </div>
-        <div v-else class="login-message">
-          Please <router-link to="/login">login</router-link> to leave feedback
-        </div>
-
-        <div class="rating-section">
-          <h3>Project Rating</h3>
-          <div v-if="isProjectOwner" class="owner-rating-display">
-            <p class="owner-notice">This is your project</p>
-            <div class="stars">
-              <span v-for="i in 5" :key="i" class="star" 
-                    :class="{ 'filled': i <= Math.round(project.average_rating || 0) }">★</span>
-            </div>
-            <div class="rating-info">
-              <span v-if="project.average_rating">
-                Average Rating: {{ project.average_rating.toFixed(1) }}
-                <span class="rating-count">({{ project.rating_count }} ratings)</span>
-              </span>
-              <span v-else>No ratings yet</span>
-            </div>
-          </div>
-          <div v-else-if="!isAuthenticated" class="login-message">
-            Please <router-link to="/login">login</router-link> to rate this project
-          </div>
-          <div v-else>
-            <StarRating 
-              :project-id="project.id"
-              :average-rating="project.average_rating"
-              :rating-count="project.rating_count"
-              @rating-updated="handleRatingUpdated"
-            />
-          </div>
-        </div>
-
-        <div class="comments-list">
-          <div v-for="feedback in feedbacks" :key="feedback.id" class="comment">
-            <div class="comment-header">
-              <span class="author">{{ feedback.user }}</span>
-              <span class="date">{{ new Date(feedback.created_at).toLocaleDateString() }}</span>
-            </div>
-            <p class="comment-content">{{ feedback.comment }}</p>
-          </div>
-          <div v-if="!feedbacks.length" class="no-feedback">
-            No feedback yet
-          </div>
+      <div v-if="project.video_url" class="project-video">
+        <h3>Project Video</h3>
+        <div class="video-container">
+          <iframe
+            :src="getEmbeddedVideoUrl(project.video_url)"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+          ></iframe>
         </div>
       </div>
+
+      <div class="rating-section">
+        <h3>Project Rating</h3>
+        <div v-if="isProjectOwner" class="owner-rating-display">
+          <p class="owner-notice">This is your project</p>
+          <div class="stars">
+            <span v-for="i in 5" :key="i" class="star" 
+                  :class="{ 'filled': i <= Math.round(project.average_rating || 0) }">★</span>
+          </div>
+          <div class="rating-info">
+            <span v-if="project.average_rating">
+              Average Rating: {{ project.average_rating.toFixed(1) }}
+              <span class="rating-count">({{ project.rating_count }} ratings)</span>
+            </span>
+            <span v-else>No ratings yet</span>
+          </div>
+        </div>
+        <div v-else-if="!isAuthenticated" class="login-message">
+          Please <router-link to="/login">login</router-link> to rate this project
+        </div>
+        <div v-else>
+          <StarRating 
+            :project-id="project.id"
+            :average-rating="project.average_rating"
+            :rating-count="project.rating_count"
+            @rating-updated="handleRatingUpdated"
+          />
+        </div>
+      </div>
+
+      <!-- New Feedback Component -->
+      <ProjectFeedback :project-id="project.id" />
     </div>
     <div v-else class="loading">
       Loading project...
@@ -202,256 +167,352 @@ const submitFeedback = async () => {
   padding: 2rem;
 }
 
+.error-message {
+  background-color: #fee2e2;
+  color: #ef4444;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
 .project-review {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
 .top-section {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 2rem;
+  padding: 2rem;
 }
 
 .preview-section {
-  flex: 1;
-  background: #f5f5f5;
   border-radius: 8px;
   overflow: hidden;
 }
 
 .preview-image {
   width: 100%;
-  height: auto;
+  height: 400px;
   object-fit: cover;
 }
 
 .empty-preview {
-  height: 300px;
+  height: 400px;
+  background: #f3f4f6;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666;
+  color: #6b7280;
 }
 
 .details-section {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.project-header h1 {
+  font-size: 2.5rem;
+  color: #1f2937;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.project-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.edit-btn, .report-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.edit-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+}
+
+.report-btn {
+  background: white;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+.edit-btn:hover, .report-btn:hover {
+  transform: translateY(-2px);
+}
+
+.edit-btn:hover {
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.report-btn:hover {
+  background: #fee2e2;
 }
 
 .project-meta {
   display: flex;
+  align-items: center;
   gap: 1rem;
-  margin: 1rem 0;
-  color: #666;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.admin-badge {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.2));
+  color: #ef4444;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .project-description {
-  margin: 1rem 0;
-  line-height: 1.6;
+  color: #4b5563;
+  line-height: 1.8;
+  font-size: 1.1rem;
 }
 
-.comments-section {
-  margin-top: 2rem;
+.rating-section {
+  padding: 2rem;
+  border-top: 1px solid #e5e7eb;
 }
 
-.comments-list {
-  margin: 1rem 0;
+.rating-section h3 {
+  color: #1f2937;
+  margin-bottom: 1.5rem;
 }
 
-.comment {
-  border-bottom: 1px solid #eee;
-  padding: 1rem 0;
+.owner-rating-display {
+  background: #f9fafb;
+  padding: 1.5rem;
+  border-radius: 8px;
 }
 
-.comment-header {
+.owner-notice {
+  color: #6b7280;
+  margin-bottom: 1rem;
+}
+
+.stars {
   display: flex;
-  justify-content: space-between;
+  gap: 4px;
   margin-bottom: 0.5rem;
 }
 
-.author {
-  font-weight: bold;
+.star {
+  color: #d1d5db;
+  font-size: 1.5rem;
 }
 
-.date {
-  color: #666;
+.star.filled {
+  color: #fbbf24;
+}
+
+.rating-info {
+  color: #4b5563;
+}
+
+.rating-count {
+  color: #6b7280;
   font-size: 0.9rem;
-}
-
-.comment-content {
-  margin: 0;
-  line-height: 1.4;
-}
-
-.comment-input {
-  margin-top: 1rem;
-}
-
-textarea {
-  width: 100%;
-  padding: 0.8rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  resize: vertical;
-}
-
-button {
-  padding: 0.8rem 1.5rem;
-  background-color: #42b883;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-button:hover {
-  background-color: #3aa876;
-}
-
-.error-message {
-  color: #dc3545;
-  padding: 1rem;
-  margin: 1rem 0;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: 4px;
-}
-
-.loading {
-  text-align: center;
-  padding: 2rem;
-  color: #666;
 }
 
 .login-message {
   text-align: center;
-  padding: 1rem;
-  color: #666;
+  padding: 1.5rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  color: #6b7280;
 }
 
 .login-message a {
-  color: #42b883;
+  color: #6366f1;
   text-decoration: none;
+  font-weight: 500;
 }
 
 .login-message a:hover {
   text-decoration: underline;
 }
 
-.rating-section {
-  margin: 2rem 0;
-  padding: 1rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+@media (max-width: 768px) {
+  .top-section {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-image, .empty-preview {
+    height: 300px;
+  }
+
+  .project-header {
+    flex-direction: column;
+  }
+
+  .project-header h1 {
+    font-size: 2rem;
+  }
+
+  .edit-btn, .report-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
-.rating-section h3 {
-  text-align: center;
-  margin-bottom: 1rem;
-  color: #333;
+.markdown-content {
+  color: #4b5563;
+  line-height: 1.8;
+  font-size: 1.1rem;
 }
 
-.owner-rating-display {
-  text-align: center;
-  padding: 1rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  color: #1f2937;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
 }
 
-.stars {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-  margin-bottom: 0.5rem;
+.markdown-content h1 { font-size: 2em; }
+.markdown-content h2 { font-size: 1.5em; }
+.markdown-content h3 { font-size: 1.25em; }
+.markdown-content h4 { font-size: 1.1em; }
+.markdown-content h5 { font-size: 1em; }
+.markdown-content h6 { font-size: 0.9em; }
+
+.markdown-content p {
+  margin-bottom: 1em;
 }
 
-.star {
-  font-size: 1.5rem;
-  color: #ddd;
+.markdown-content ul,
+.markdown-content ol {
+  margin-bottom: 1em;
+  padding-left: 2em;
 }
 
-.star.filled {
-  color: #ffd700;
+.markdown-content li {
+  margin-bottom: 0.5em;
 }
 
-.rating-info {
-  color: #666;
-  font-size: 0.9rem;
+.markdown-content code {
+  background-color: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: monospace;
 }
 
-.rating-count {
-  color: #999;
-  margin-left: 0.3rem;
+.markdown-content pre {
+  background-color: #f3f4f6;
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin-bottom: 1em;
 }
 
-.owner-notice {
-  color: #666;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
+.markdown-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  margin-left: 0;
+  color: #6b7280;
   font-style: italic;
 }
 
-.owner-message {
-  background-color: #f8f9fa;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  text-align: center;
-  color: #666;
-  font-style: italic;
-}
-
-.no-feedback {
-  text-align: center;
-  padding: 1rem;
-  color: #666;
-  font-style: italic;
-}
-
-.project-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.edit-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: white;
+.markdown-content a {
+  color: #6366f1;
   text-decoration: none;
+}
+
+.markdown-content a:hover {
+  text-decoration: underline;
+}
+
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 1em 0;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1em;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5em;
+  text-align: left;
+}
+
+.markdown-content th {
+  background-color: #f9fafb;
+  font-weight: 600;
+}
+
+.project-video {
+  margin: 2rem;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.project-video h3 {
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+
+.video-container {
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+  height: 0;
+  overflow: hidden;
   border-radius: 8px;
-  font-weight: 500;
-  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.edit-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-}
-
-.edit-button svg {
-  transition: transform 0.3s ease;
-}
-
-.edit-button:hover svg {
-  transform: rotate(-15deg);
-}
-
-.admin-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.2));
-  color: #ef4444;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-left: 8px;
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
 }
 </style>

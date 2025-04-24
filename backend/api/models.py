@@ -48,13 +48,27 @@ class Project(models.Model):
 
 # Feedback Model
 class Feedback(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='feedbacks')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     comment = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Feedback by {self.user.username} on {self.project.title}"
+        return f"{self.user.username}'s feedback on {self.project.title}"
+
+# Reported Feedback Model
+class ReportedFeedback(models.Model):
+    feedback = models.ForeignKey(Feedback, on_delete=models.CASCADE, related_name='reports')
+    reporter = models.ForeignKey(User, on_delete=models.CASCADE)
+    reason = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_resolved = models.BooleanField(default=False)
+    resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='resolved_reports')
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Report on {self.feedback.user.username}'s feedback by {self.reporter.username}"
 
 # Rating Model
 class Rating(models.Model):
@@ -111,16 +125,18 @@ class SearchLog(models.Model):
     query = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
-# Report Model
-class Report(models.Model):
-    STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Reviewed', 'Reviewed'),
-        ('Resolved', 'Resolved'),
-    ]
-    reported_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    feedback = models.ForeignKey(Feedback, on_delete=models.SET_NULL, null=True, blank=True)
+# Reported Project Model
+class ReportedProject(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='reports')
+    reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='project_reports')
     reason = models.TextField()
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Pending')
     created_at = models.DateTimeField(auto_now_add=True)
+    is_resolved = models.BooleanField(default=False)
+    resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='resolved_project_reports')
+    resolved_at = models.DateTimeField(null=True)
+
+    def __str__(self):
+        return f"Report on {self.project.title} by {self.reporter.username}"
+
+    class Meta:
+        ordering = ['-created_at']

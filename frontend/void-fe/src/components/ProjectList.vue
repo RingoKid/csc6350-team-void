@@ -11,7 +11,6 @@
             <h2>Featured Project</h2>
             <h3>{{ featuredProject.title }}</h3>
             <p class="featured-category">Category: {{ featuredProject.category }}</p>
-            <p class="featured-description">{{ featuredProject.description }}</p>
             <div class="featured-stats">
               <div class="rating-display">
                 <span class="stars">

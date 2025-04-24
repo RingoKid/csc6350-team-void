@@ -12,8 +12,8 @@ class FeedbackSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Feedback
-        fields = ['id', 'project', 'user', 'comment', 'created_at']
-        read_only_fields = ['user']
+        fields = ['id', 'project', 'user', 'comment', 'created_at', 'updated_at']
+        read_only_fields = ['user', 'created_at', 'updated_at']
 
 class RatingSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.username')
@@ -47,12 +47,6 @@ class SearchLogSerializer(serializers.ModelSerializer):
         model = SearchLog
         fields = '__all__'
 
-class ReportSerializer(serializers.ModelSerializer):
-    
-    class Meta:
-        model = Report
-        fields = '__all__'
-
 class ProjectSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.username')
     average_rating = serializers.FloatField(read_only=True)
@@ -62,7 +56,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = ['id', 'title', 'description', 'category', 'thumbnail', 
-                 'created_at', 'updated_at', 'user', 'average_rating', 
+                 'video_url', 'created_at', 'updated_at', 'user', 'average_rating', 
                  'rating_count', 'user_rating']
         read_only_fields = ['user']
 
@@ -104,3 +98,37 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             institution=validated_data.get('institution')
         )
         return user
+
+class ReportedFeedbackSerializer(serializers.ModelSerializer):
+    feedback = FeedbackSerializer(read_only=True)
+    reporter = serializers.ReadOnlyField(source='reporter.username')
+    resolved_by = serializers.ReadOnlyField(source='resolved_by.username', allow_null=True)
+    feedback_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = ReportedFeedback
+        fields = ['id', 'feedback', 'feedback_id', 'reporter', 'reason', 'created_at', 'is_resolved', 'resolved_by', 'resolved_at']
+        read_only_fields = ['id', 'created_at', 'resolved_by', 'resolved_at']
+        depth = 1
+
+    def create(self, validated_data):
+        feedback_id = validated_data.pop('feedback_id')
+        feedback = Feedback.objects.get(id=feedback_id)
+        return ReportedFeedback.objects.create(feedback=feedback, **validated_data)
+
+class ReportedProjectSerializer(serializers.ModelSerializer):
+    project = ProjectSerializer(read_only=True)
+    reporter = serializers.ReadOnlyField(source='reporter.username')
+    resolved_by = serializers.ReadOnlyField(source='resolved_by.username', allow_null=True)
+    project_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = ReportedProject
+        fields = ['id', 'project', 'project_id', 'reporter', 'reason', 'created_at', 'is_resolved', 'resolved_by', 'resolved_at']
+        read_only_fields = ['id', 'created_at', 'resolved_by', 'resolved_at']
+        depth = 1
+
+    def create(self, validated_data):
+        project_id = validated_data.pop('project_id')
+        project = Project.objects.get(id=project_id)
+        return ReportedProject.objects.create(project=project, **validated_data)

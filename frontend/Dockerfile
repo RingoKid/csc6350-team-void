@@ -14,13 +14,8 @@ RUN npm install
 # Copy the rest of the application files
 COPY void-fe/. .
 
-# Build for production
-RUN npm run build
-
-# Install serve package
-RUN npm install -g serve
-
+# Expose the development server port
 EXPOSE 3000
 
-# Serve the built application
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# Start the development server
+CMD ["npm", "run", "dev"]

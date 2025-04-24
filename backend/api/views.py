@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly, BasePermission
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 class IsOwnerOrSuperuser(BasePermission):
     """
@@ -37,6 +38,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             permission_classes = [AllowAny]
+        elif self.action in ['rate']:
+            permission_classes = [IsAuthenticated]
         else:
             permission_classes = [IsAuthenticated, IsOwnerOrSuperuser]
         return [permission() for permission in permission_classes]
@@ -75,6 +78,23 @@ class ProjectViewSet(viewsets.ModelViewSet):
 class FeedbackViewSet(viewsets.ModelViewSet):
     queryset = Feedback.objects.all()
     serializer_class = FeedbackSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes = [IsAuthenticated, IsOwnerOrSuperuser]
+        else:
+            permission_classes = [IsAuthenticatedOrReadOnly]
+        return [permission() for permission in permission_classes]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id', None)
+        if project_id:
+            return Feedback.objects.filter(project_id=project_id)
+        return Feedback.objects.all()
 
 class RatingViewSet(viewsets.ModelViewSet):
     queryset = Rating.objects.all()
@@ -96,10 +116,6 @@ class SearchLogViewSet(viewsets.ModelViewSet):
     queryset = SearchLog.objects.all()
     serializer_class = SearchLogSerializer
 
-class ReportViewSet(viewsets.ModelViewSet):
-    queryset = Report.objects.all()
-    serializer_class = ReportSerializer
-    
 class ProjectSearchView(APIView):
     def get(self, request):
         # Get the search keyword from the query parameters
@@ -119,6 +135,8 @@ class ProjectSearchView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class UserRegistrationView(APIView):
+    permission_classes = [AllowAny]
+    
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
@@ -127,12 +145,20 @@ class UserRegistrationView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ProjectFeedbackView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get(self, request, project_id):
         feedbacks = Feedback.objects.filter(project_id=project_id)
         serializer = FeedbackSerializer(feedbacks, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id)
+        serializer = FeedbackSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user, project=project)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserProjectsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -142,3 +168,127 @@ class UserProjectsView(APIView):
         projects = Project.objects.filter(user=request.user)
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class ReportedFeedbackViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ReportedFeedbackSerializer
+    queryset = ReportedFeedback.objects.all()
+
+    def get_queryset(self):
+        if self.request.user.is_superuser:
+            return ReportedFeedback.objects.all().select_related('feedback', 'reporter', 'resolved_by')
+        return ReportedFeedback.objects.filter(reporter=self.request.user).select_related('feedback', 'reporter', 'resolved_by')
+
+    def perform_create(self, serializer):
+        serializer.save(reporter=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def resolve(self, request, pk=None):
+        try:
+            report = self.get_object()
+            if not request.user.is_superuser:
+                return Response(
+                    {"detail": "Only superusers can resolve reports"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            report.is_resolved = True
+            report.resolved_by = request.user
+            report.resolved_at = timezone.now()
+            report.save()
+            
+            return Response(self.get_serializer(report).data)
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
+    def delete_feedback(self, request, pk=None):
+        try:
+            report = self.get_object()
+            if not request.user.is_superuser:
+                return Response(
+                    {"detail": "Only superusers can delete feedback"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # First mark the report as resolved
+            report.is_resolved = True
+            report.resolved_by = request.user
+            report.resolved_at = timezone.now()
+            report.save()
+            
+            # Then delete the associated feedback
+            feedback = report.feedback
+            feedback.delete()
+            
+            return Response({"detail": "Feedback deleted successfully"})
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class ReportedProjectViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ReportedProjectSerializer
+    queryset = ReportedProject.objects.all()
+
+    def get_queryset(self):
+        if self.request.user.is_superuser:
+            return ReportedProject.objects.all().select_related('project', 'reporter', 'resolved_by')
+        return ReportedProject.objects.filter(reporter=self.request.user).select_related('project', 'reporter', 'resolved_by')
+
+    def perform_create(self, serializer):
+        serializer.save(reporter=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def resolve(self, request, pk=None):
+        try:
+            report = self.get_object()
+            if not request.user.is_superuser:
+                return Response(
+                    {"detail": "Only superusers can resolve reports"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            report.is_resolved = True
+            report.resolved_by = request.user
+            report.resolved_at = timezone.now()
+            report.save()
+            
+            return Response(self.get_serializer(report).data)
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
+    def delete_project(self, request, pk=None):
+        try:
+            report = self.get_object()
+            if not request.user.is_superuser:
+                return Response(
+                    {"detail": "Only superusers can delete projects"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # First mark the report as resolved
+            report.is_resolved = True
+            report.resolved_by = request.user
+            report.resolved_at = timezone.now()
+            report.save()
+            
+            # Then delete the associated project
+            project = report.project
+            project.delete()
+            
+            return Response({"detail": "Project deleted successfully"})
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
